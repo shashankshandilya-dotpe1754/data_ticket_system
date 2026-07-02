@@ -135,10 +135,11 @@ def login():
     session["oauth_state"] = state
 
     print("=" * 80)
-    print("LOGIN")
-    print("STATE :", state)
-    print("AUTH URL :", authorization_url)
-    print("=" * 80)
+print("LOGIN")
+print("STATE :", state)
+print("AUTH URL REPR:")
+print(repr(authorization_url))
+print("=" * 80)
 
     return redirect(authorization_url)
 
