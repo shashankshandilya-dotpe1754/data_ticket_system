@@ -312,8 +312,12 @@ def new_ticket():
         # Email
         # -----------------------------------------
 
+        # Build the Gmail API client ONCE for this request and reuse it
+        # below, instead of building it fresh in each helper call.
+        gmail_svc = gmail_utils.gmail_service(creds)
+
         signature = gmail_utils.get_signature(
-            creds
+            gmail_svc
         )
 
         email_subject = (
@@ -381,7 +385,7 @@ def new_ticket():
 
         sent = gmail_utils.send_new_ticket_email(
 
-            creds=creds,
+            service=gmail_svc,
 
             to=", ".join(config.RECEIVERS),
 
@@ -399,7 +403,7 @@ def new_ticket():
 
         rfc_message_id = gmail_utils.get_rfc_message_id(
 
-            creds,
+            gmail_svc,
 
             sent["message_id"]
 
@@ -962,9 +966,13 @@ def update_ticket(ticket_id):
         "rfc_message_id": ticket.get("RFC Message Id"),
     }
 
+    # Build the Gmail API client ONCE for this request and reuse it
+    # below, instead of building it fresh in each helper call.
+    gmail_svc = gmail_utils.gmail_service(creds)
+
     signature = gmail_utils.get_signature(
 
-        creds
+        gmail_svc
 
     )
 
@@ -1034,7 +1042,7 @@ Ticket Updated
 
         gmail_utils.send_threaded_reply(
 
-            creds=creds,
+            service=gmail_svc,
 
             to=ticket["Requestor Email"],
 
