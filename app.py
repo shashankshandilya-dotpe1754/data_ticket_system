@@ -133,13 +133,10 @@ def login():
 def oauth2callback():
 
     try:
-
         token = auth.google().authorize_access_token()
 
     except OAuthError as e:
-
         flash(str(e))
-
         return redirect(url_for("home"))
 
     session["credentials"] = {
@@ -151,16 +148,11 @@ def oauth2callback():
         "scopes": config.SCOPES,
     }
 
-    email = auth.get_user_email(
-        token["access_token"]
-    )
+    email = auth.get_user_email(token["access_token"])
 
     session["email"] = email
 
-    if auth.is_acceptor(email):
-
-        team_status.register_acceptor_login(email)
-
+    if config.is_acceptor_email(email):
         return redirect(url_for("dashboard"))
 
     return redirect(url_for("my_tickets"))
