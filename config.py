@@ -4,12 +4,17 @@ Edit the values in this file for your environment.
 """
 
 import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import json
+# ==========================================================
+# Google OAuth Configuration
+# ==========================================================
 
-CLIENT_SECRETS_FILE = os.path.join(
-    BASE_DIR,
-    "client_secret.json"
-)
+CLIENT_SECRET_JSON = os.environ.get("CLIENT_SECRET_JSON")
+
+if CLIENT_SECRET_JSON:
+    CLIENT_CONFIG = json.loads(CLIENT_SECRET_JSON)
+else:
+    CLIENT_CONFIG = None
 # Allow OAuth over localhost during development
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -39,7 +44,7 @@ COLUMNS = [
 # ---------------------------------------------------------------------------
 # Download this from Google Cloud Console -> APIs & Services -> Credentials
 # (OAuth 2.0 Client ID, type "Web application"). See README.md for full steps.
-CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), "client_secret.json")
+
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.send",
