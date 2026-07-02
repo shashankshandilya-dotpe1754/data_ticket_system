@@ -49,24 +49,16 @@ def inject_role():
 
 
 def current_user():
-    """
-    Returns:
-        (email, credentials)
-        or
-        (None, None)
-    """
 
     email = session.get("email")
 
     if not email:
         return None, None
 
-    creds = auth.load_credentials(email)
+    creds = auth.credentials_from_session(session)
 
     if creds is None:
-
         session.clear()
-
         return None, None
 
     return email, creds
