@@ -4,8 +4,6 @@ __pycache__/
 .tokens/
 uploads/
 
-client_secret.json
-
 .thread_store.json
 
 .acceptors_registry.json
