@@ -43,7 +43,7 @@ def inject_role():
 
     return {
         "is_current_user_acceptor":
-            bool(email and auth.is_acceptor(email))
+            bool(email and config.is_acceptor_email(email))
     }
 
 
@@ -100,7 +100,7 @@ def acceptor_required(func):
 
             return redirect(url_for("login"))
 
-        if not auth.is_acceptor(email):
+        if not config.is_acceptor_email(email):
 
             abort(403)
 
