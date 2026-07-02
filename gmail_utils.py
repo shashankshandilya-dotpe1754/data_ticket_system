@@ -1,6 +1,17 @@
 """
 Everything related to composing / sending / threading Gmail messages
 using the logged-in user's OWN Gmail account (via their OAuth token).
+
+MEMORY NOTE: build("gmail", "v1", credentials=creds) parses Google's API
+discovery document into memory every time it's called. The old version of
+this file built a brand-new service object inside every single helper
+function, so a single ticket creation triggered 3 separate builds, and a
+single status update triggered 2. On a 512MB Render instance, that
+repeated parsing was a meaningful contributor to OOM crashes.
+
+Fix: every function below now takes an already-built `service` object
+instead of raw `creds`. Callers build the service ONCE per request via
+gmail_service(creds) and pass it into every helper that needs it.
 """
 
 import base64
@@ -14,13 +25,14 @@ from googleapiclient.discovery import build
 
 
 def gmail_service(creds):
-    return build("gmail", "v1", credentials=creds)
+    """Call this ONCE per request, then pass the returned object into
+    every other function below instead of calling this repeatedly."""
+    return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 
-def get_signature(creds) -> str:
+def get_signature(service) -> str:
     """Fetch the user's default Gmail signature (HTML) for their primary
     send-as address. Falls back to empty string if none is configured."""
-    service = gmail_service(creds)
     try:
         result = service.users().settings().sendAs().list(userId="me").execute()
         for entry in result.get("sendAs", []):
@@ -74,11 +86,10 @@ def _build_mime(to, subject, html_body, cc=None, bcc=None, attachments=None,
     return {"raw": raw}
 
 
-def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
+def send_new_ticket_email(service, to, subject, html_body, cc=None, bcc=None,
                            attachments=None):
     """Sends the initial ticket-creation email and returns the Gmail
     threadId + messageId so replies can be threaded onto it later."""
-    service = gmail_service(creds)
     body = _build_mime(to, subject, html_body, cc=cc, bcc=bcc,
                         attachments=attachments)
     sent = service.users().messages().send(userId="me", body=body).execute()
@@ -86,11 +97,10 @@ def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
             "message_id": sent["id"]}
 
 
-def send_threaded_reply(creds, to, subject, html_body, thread_id,
+def send_threaded_reply(service, to, subject, html_body, thread_id,
                          rfc_message_id, cc=None, bcc=None, attachments=None):
     """Sends a reply that Gmail will display in the SAME conversation
     thread as the original ticket email."""
-    service = gmail_service(creds)
     if not subject.lower().startswith("re:"):
         subject = f"Re: {subject}"
     body = _build_mime(
@@ -102,10 +112,9 @@ def send_threaded_reply(creds, to, subject, html_body, thread_id,
     return sent
 
 
-def get_rfc_message_id(creds, gmail_message_id: str) -> str:
+def get_rfc_message_id(service, gmail_message_id: str) -> str:
     """Gmail API's own message id isn't the RFC822 Message-ID header value
     that In-Reply-To/References need — fetch the header explicitly."""
-    service = gmail_service(creds)
     msg = service.users().messages().get(
         userId="me", id=gmail_message_id, format="metadata",
         metadataHeaders=["Message-ID"],
