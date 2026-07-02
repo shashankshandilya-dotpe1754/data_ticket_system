@@ -138,8 +138,14 @@ def login():
     print("LOGIN")
     print("STATE :", state)
     print("AUTH URL REPR:")
+    print(type(authorization_url))
+    print(len(authorization_url))
+    print(authorization_url)
     print(repr(authorization_url))
     print("=" * 80)
+
+    if not authorization_url.startswith("https://"):
+    raise Exception(f"Invalid OAuth URL: {authorization_url}")
 
     return redirect(authorization_url)
 
