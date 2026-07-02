@@ -131,12 +131,7 @@ def login():
 @app.route("/oauth2callback")
 def oauth2callback():
 
-    try:
-        token = auth.google().authorize_access_token()
-
-    except OAuthError as e:
-        flash(str(e))
-        return redirect(url_for("home"))
+    token = auth.google().authorize_access_token()
 
     session["credentials"] = {
         "token": token["access_token"],
