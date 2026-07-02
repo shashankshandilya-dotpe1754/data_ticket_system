@@ -18,6 +18,7 @@ from werkzeug.utils import secure_filename
 
 import config
 import auth
+from authlib.integrations.flask_client.errors import OAuthError
 import gmail_utils
 import sheets_utils
 import team_status
@@ -25,6 +26,8 @@ import team_status
 app = Flask(__name__)
 
 app.secret_key = config.SECRET_KEY
+
+auth.init_oauth(app)
 
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 
@@ -121,33 +124,14 @@ def acceptor_required(func):
 @app.route("/login")
 def login():
 
-    # Always clear previous OAuth state
-    session.pop("oauth_state", None)
-
-    flow = auth.build_flow()
-
-    authorization_url, state = flow.authorization_url(
-        access_type="offline",
-        include_granted_scopes="true",
-        prompt="consent"
+    redirect_uri = url_for(
+        "oauth2callback",
+        _external=True
     )
 
-    session["oauth_state"] = state
-
-    print("=" * 80)
-    print("LOGIN")
-    print("STATE :", state)
-    print("AUTH URL REPR:")
-    print(type(authorization_url))
-    print(len(authorization_url))
-    print(authorization_url)
-    print(repr(authorization_url))
-    print("=" * 80)
-
-    if not authorization_url.startswith("https://"):
-    raise Exception(f"Invalid OAuth URL: {authorization_url}")
-
-    return redirect(authorization_url)
+    return auth.google().authorize_redirect(
+        redirect_uri
+    )
 
 # ==========================================================
 # OAuth Callback
@@ -158,92 +142,36 @@ def oauth2callback():
 
     try:
 
-        if "error" in request.args:
+        token = auth.google().authorize_access_token()
 
-            flash(
-                f"Google Login Failed : {request.args['error']}",
-                "danger"
-            )
+    except OAuthError as e:
 
-            return redirect(url_for("login"))
+        flash(str(e))
 
-        if "code" not in request.args:
+        return redirect(url_for("home"))
 
-            flash(
-                "Authorization code missing.",
-                "danger"
-            )
+    session["credentials"] = {
+        "token": token["access_token"],
+        "refresh_token": token.get("refresh_token"),
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "client_id": config.CLIENT_CONFIG["web"]["client_id"],
+        "client_secret": config.CLIENT_CONFIG["web"]["client_secret"],
+        "scopes": config.SCOPES,
+    }
 
-            return redirect(url_for("login"))
+    email = auth.get_user_email(
+        token["access_token"]
+    )
 
-        state = session.get("oauth_state")
+    session["email"] = email
 
-        if not state:
+    if auth.is_acceptor(email):
 
-            flash(
-                "OAuth session expired. Please login again.",
-                "danger"
-            )
+        team_status.register_acceptor_login(email)
 
-            return redirect(url_for("login"))
+        return redirect(url_for("dashboard"))
 
-        flow = auth.build_flow(state)
-
-        print("=" * 80)
-        print("CALLBACK")
-        print("STATE :", state)
-        print("REQUEST URL :", request.url)
-        print("ARGS :", dict(request.args))
-        print("=" * 80)
-
-        flow.fetch_token(
-            authorization_response=request.url
-        )
-
-        creds = flow.credentials
-
-        email = auth.get_user_email(creds)
-
-        auth.save_credentials(
-            email,
-            creds
-        )
-
-        session.clear()
-
-        session["email"] = email
-
-        print("=" * 80)
-        print("LOGIN SUCCESS")
-        print("EMAIL :", email)
-        print("=" * 80)
-
-        if auth.is_acceptor(email):
-
-            team_status.register_acceptor_login(email)
-
-            return redirect(
-                url_for("dashboard")
-            )
-
-        return redirect(
-            url_for("my_tickets")
-        )
-
-    except Exception as e:
-
-        import traceback
-
-        traceback.print_exc()
-
-        flash(
-            f"OAuth Error : {str(e)}",
-            "danger"
-        )
-
-        return redirect(
-            url_for("login")
-        )
+    return redirect(url_for("my_tickets"))
 
 
 # ==========================================================
