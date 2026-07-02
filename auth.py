@@ -89,3 +89,6 @@ def get_user_email(access_token):
     response.raise_for_status()
 
     return response.json()["email"]
+
+def is_acceptor(email):
+    return config.is_acceptor_email(email)
