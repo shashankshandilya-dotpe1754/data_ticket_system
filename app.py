@@ -26,7 +26,7 @@ app = Flask(__name__)
 
 app.secret_key = config.SECRET_KEY
 
-auth.init_oauth(app)
+#auth.init_oauth(app)
 
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 
