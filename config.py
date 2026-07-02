@@ -4,6 +4,12 @@ Edit the values in this file for your environment.
 """
 
 import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+CLIENT_SECRETS_FILE = os.path.join(
+    BASE_DIR,
+    "client_secret.json"
+)
 # Allow OAuth over localhost during development
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
