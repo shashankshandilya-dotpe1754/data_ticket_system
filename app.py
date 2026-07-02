@@ -114,18 +114,14 @@ def acceptor_required(func):
 
 @app.route("/login")
 def login():
-
-    redirect_uri = url_for(
-        "oauth2callback",
-        _external=True
-    )
-
-    return auth.google().authorize_redirect(
-        redirect_uri,
+    flow = auth.build_flow()
+    auth_url, state = flow.authorization_url(
         access_type="offline",
-        prompt="consent",
         include_granted_scopes="true",
+        prompt="consent",   # forces Google to re-issue a refresh_token every time
     )
+    session["oauth_state"] = state
+    return redirect(auth_url)
 
 # ==========================================================
 # OAuth Callback
@@ -133,33 +129,19 @@ def login():
 
 @app.route("/oauth2callback")
 def oauth2callback():
+    state = session.get("oauth_state")
+    flow = auth.build_flow(state=state)
+    flow.fetch_token(authorization_response=request.url)
+    creds = flow.credentials
+    email = auth.get_user_email(creds)
 
-    token = auth.google().authorize_access_token()
-
-    print("=" * 80)
-    print(token)
-    print("=" * 80)
-
-    session["credentials"] = {
-        "token": token["access_token"],
-        "refresh_token": token.get("refresh_token"),
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "client_id": config.CLIENT_CONFIG["web"]["client_id"],
-        "client_secret": config.CLIENT_CONFIG["web"]["client_secret"],
-        "scopes": config.SCOPES,
-    }
-
-    email = auth.get_user_email(token["access_token"])
-
+    session["credentials"] = auth.credentials_to_dict(creds)
     session["email"] = email
 
-    team_status.register_acceptor_login(email)
-
-    if config.is_acceptor_email(email):
+    if auth.is_acceptor(email):
+        team_status.register_acceptor_login(email)
         return redirect(url_for("dashboard"))
-
     return redirect(url_for("my_tickets"))
-
 
 # ==========================================================
 # Logout
