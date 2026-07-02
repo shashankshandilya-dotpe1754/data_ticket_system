@@ -972,7 +972,10 @@ def update_ticket(ticket_id):
     # Gmail Thread
     # --------------------------------------------
 
-    thread = _get_thread(ticket_id)
+    thread = {
+    "thread_id": ticket.get("Thread Id"),
+    "rfc_message_id": ticket.get("RFC Message Id"),
+}
 
     signature = gmail_utils.get_signature(
 
