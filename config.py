@@ -71,6 +71,8 @@ COLUMNS = [
     "Updated Date",
     "Closed Date",
     "Acceptor Description",
+    "Thread Id",
+    "RFC Message Id", 
 ]
 
 # ==========================================================
