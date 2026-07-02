@@ -1,5 +1,4 @@
 import os
-import json
 import datetime
 from functools import wraps
 
@@ -25,8 +24,6 @@ import team_status
 app = Flask(__name__)
 
 app.secret_key = config.SECRET_KEY
-
-#auth.init_oauth(app)
 
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 
@@ -408,7 +405,7 @@ def new_ticket():
 
         )
 
-ticket = {
+        ticket = {
             "Ticket ID": ticket_id,
             "Created Date": now_string,
             "Requestor Email": email,
@@ -961,9 +958,9 @@ def update_ticket(ticket_id):
     # --------------------------------------------
 
     thread = {
-    "thread_id": ticket.get("Thread Id"),
-    "rfc_message_id": ticket.get("RFC Message Id"),
-}
+        "thread_id": ticket.get("Thread Id"),
+        "rfc_message_id": ticket.get("RFC Message Id"),
+    }
 
     signature = gmail_utils.get_signature(
 
@@ -1027,7 +1024,7 @@ Ticket Updated
 
 """
 
-    if thread:
+    if thread.get("thread_id") and thread.get("rfc_message_id"):
 
         default_cc = config.default_cc_for_assignee(
 
@@ -1055,6 +1052,18 @@ Ticket Updated
 
         )
 
+    else:
+
+        flash(
+
+            "Ticket updated, but no thread info was found for this "
+            "ticket (likely created before the Thread Id/RFC Message Id "
+            "columns were added) — the requestor was not emailed.",
+
+            "warning"
+
+        )
+
     # --------------------------------------------
     # Success
     # --------------------------------------------
@@ -1078,40 +1087,6 @@ Ticket Updated
         )
 
     )
-
-# ---------------------------------------------------------------------------
-# THREAD BOOKKEEPING
-# ---------------------------------------------------------------------------
-# Gmail's threadId / RFC Message-ID need to be stored somewhere so replies
-# land in the same conversation. Simplest robust option: two extra hidden
-# columns in your sheet (N: Thread Id, O: RFC Message Id). This helper
-# reads/writes those directly so you don't have to touch sheets_utils'
-# COLUMNS list (which mirrors your visible sheet layout).
-import json
-THREAD_STORE = os.path.join(os.path.dirname(__file__), ".thread_store.json")
-
-
-def _load_thread_store():
-    if not os.path.exists(THREAD_STORE):
-        return {}
-    with open(THREAD_STORE) as f:
-        return json.load(f)
-
-
-def _remember_thread(ticket_id, thread_id, rfc_message_id, requestor_email):
-    store = _load_thread_store()
-    store[ticket_id] = {
-        "thread_id": thread_id,
-        "rfc_message_id": rfc_message_id,
-        "requestor_email": requestor_email,
-    }
-    with open(THREAD_STORE, "w") as f:
-        json.dump(store, f)
-
-
-def _get_thread(ticket_id):
-    return _load_thread_store().get(ticket_id)
-
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
