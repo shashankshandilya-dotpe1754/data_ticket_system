@@ -31,14 +31,11 @@ import config
 
 
 def build_flow(state=None):
-    """
-    Build OAuth flow from JSON stored in config.CLIENT_CONFIG
-    """
 
-    if config.CLIENT_CONFIG is None:
-        raise Exception(
-            "CLIENT_SECRET_JSON environment variable is missing."
-        )
+    print("=" * 80)
+    print("CLIENT CONFIG")
+    print(config.CLIENT_CONFIG)
+    print("=" * 80)
 
     flow = Flow.from_client_config(
         config.CLIENT_CONFIG,
