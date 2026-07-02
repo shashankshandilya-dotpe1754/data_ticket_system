@@ -23,36 +23,35 @@ Uses OAuth client JSON from Render Environment Variable:
 CLIENT_SECRET_JSON
 """
 
-from google_auth_oauthlib.flow import Flow
+import requests
+from authlib.integrations.flask_client import OAuth
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
-import requests
+
 import config
 
+oauth = OAuth()
 
-def build_flow(state=None):
 
-    print("=" * 80)
-    print("AUTH URI :", config.CLIENT_CONFIG["web"]["auth_uri"])
-    print("TOKEN URI:", config.CLIENT_CONFIG["web"]["token_uri"])
-    print("REDIRECT :", config.CLIENT_CONFIG["web"]["redirect_uris"])
-    print("=" * 80)
+def init_oauth(app):
+    oauth.init_app(app)
 
-    flow = Flow.from_client_config(
-        config.CLIENT_CONFIG,
-        scopes=config.SCOPES,
-        state=state,
+    oauth.register(
+        name="google",
+        client_id=config.CLIENT_CONFIG["web"]["client_id"],
+        client_secret=config.CLIENT_CONFIG["web"]["client_secret"],
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={
+            "scope": " ".join(config.SCOPES)
+        },
     )
 
-    flow.redirect_uri = config.OAUTH_REDIRECT_URI
 
-    return flow
+def google():
+    return oauth.google
 
 
 def credentials_from_session(session):
-    """
-    Rebuild Google Credentials from Flask session.
-    """
 
     if "credentials" not in session:
         return None
@@ -67,9 +66,6 @@ def credentials_from_session(session):
 
 
 def credentials_to_dict(creds):
-    """
-    Convert Credentials object into session dictionary.
-    """
 
     return {
         "token": creds.token,
@@ -81,15 +77,12 @@ def credentials_to_dict(creds):
     }
 
 
-def get_user_email(credentials):
-    """
-    Return authenticated Gmail address.
-    """
+def get_user_email(access_token):
 
     response = requests.get(
         "https://openidconnect.googleapis.com/v1/userinfo",
         headers={
-            "Authorization": f"Bearer {credentials.token}"
+            "Authorization": f"Bearer {access_token}"
         },
     )
 
