@@ -146,6 +146,8 @@ def oauth2callback():
 
     session["email"] = email
 
+    team_status.register_acceptor_login(email)
+
     if config.is_acceptor_email(email):
         return redirect(url_for("dashboard"))
 
