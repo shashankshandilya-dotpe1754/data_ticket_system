@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Data Team Dashboard</h3>
+
+{% if availability.status != "Available" %}
+<div class="alert alert-warning d-flex justify-content-between align-items-center">
+  <span>⏰ Team status: <b>{{ availability.status }}</b>{% if availability.note %} — {{ availability.note }}{% endif %}</span>
+  <a href="{{ url_for('availability') }}" class="btn btn-sm btn-outline-dark">Change</a>
+</div>
+{% endif %}
+
+<div class="row mb-4">
+  {% for s in statuses %}
+  <div class="col">
+    <div class="card text-center shadow-sm">
+      <div class="card-body">
+        <h6 class="text-muted">{{ s }}</h6>
+        <h3>{{ counts.get(s, 0) }}</h3>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-auto">
+    <select name="status" class="form-select" onchange="this.form.submit()">
+      <option value="All" {% if current_status=='All' %}selected{% endif %}>All Statuses</option>
+      {% for s in statuses %}
+        <option value="{{ s }}" {% if current_status==s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="priority" class="form-select" onchange="this.form.submit()">
+      <option value="All" {% if current_priority=='All' %}selected{% endif %}>All Priorities</option>
+      {% for p in priorities %}
+        <option value="{{ p }}" {% if current_priority==p %}selected{% endif %}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-auto">
+    <select name="assigned_to" class="form-select" onchange="this.form.submit()">
+      <option value="All" {% if current_assignee=='All' %}selected{% endif %}>All Assignees</option>
+      {% for a in acceptors %}
+        <option value="{{ a }}" {% if current_assignee==a %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<table class="table table-hover table-bordered bg-white">
+  <thead class="table-light">
+    <tr>
+      <th>Ticket ID</th><th>Requestor</th><th>Subject</th><th>Priority</th>
+      <th>Status</th><th>Assigned To</th><th>Created</th><th>Updated</th><th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in tickets %}
+    <tr>
+      <td>{{ t['Ticket ID'] }}</td>
+      <td>{{ t['Requestor Email'] }}</td>
+      <td>{{ t['Subject'] }}</td>
+      <td><span class="badge bg-{{ 'danger' if t['Priority']=='High' else ('warning' if t['Priority']=='Medium' else 'secondary') }}">{{ t['Priority'] }}</span></td>
+      <td><span class="badge bg-info text-dark">{{ t['Status'] }}</span></td>
+      <td>{{ t['Assigned To'] or '—' }}</td>
+      <td>{{ t['Created Date'] }}</td>
+      <td>{{ t['Updated Date'] }}</td>
+      <td><a href="{{ url_for('ticket_detail', ticket_id=t['Ticket ID']) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
+    </tr>
+    {% else %}
+    <tr><td colspan="9" class="text-center text-muted">No tickets match this filter.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

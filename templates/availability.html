@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('dashboard') }}" class="btn btn-link">← Dashboard</a>
+<h3>Team Availability Notice</h3>
+<p class="text-muted">
+  This is shown to requestors (and included in their confirmation email)
+  when they raise a ticket outside office hours ({{ 10 }}:00–{{ 19 }}:00),
+  or whenever this status is not "Available".
+</p>
+
+<div class="alert alert-info">
+  Current status: <b>{{ current.status }}</b>
+  {% if current.note %} — {{ current.note }}{% endif %}
+  {% if current.set_by %}<br><small>Set by {{ current.set_by }} at {{ current.updated }}</small>{% endif %}
+</div>
+
+<form method="POST">
+  <div class="mb-3">
+    <label class="form-label">Status</label>
+    <select name="status" class="form-select">
+      {% for o in options %}
+        <option value="{{ o }}" {% if current.status==o %}selected{% endif %}>{{ o }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Note <span class="text-muted">(optional, e.g. "back on Monday")</span></label>
+    <input type="text" name="note" class="form-control" value="{{ current.note }}">
+  </div>
+  <button type="submit" class="btn btn-primary">Save</button>
+</form>
+{% endblock %}

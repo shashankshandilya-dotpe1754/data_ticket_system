@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Raise a New Data Request Ticket</h3>
+<div class="mb-3">
+  <a href="{{ url_for('my_tickets') }}" class="btn btn-link">← My Tickets</a>
+</div>
+
+{% if banner %}
+<div class="alert alert-warning">⏰ {{ banner }}</div>
+{% endif %}
+
+<form method="POST" enctype="multipart/form-data" id="ticketForm">
+  <div class="mb-3">
+    <label class="form-label">Subject *</label>
+    <input type="text" name="subject" class="form-control" required
+           value="{{ form.get('subject','') }}">
+  </div>
+
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <label class="form-label">Priority *</label>
+      <select name="priority" id="priority" class="form-select" required>
+        {% for p in priorities %}
+          <option value="{{ p }}" {% if form.get('priority')==p %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-8 mb-3">
+      <label class="form-label">High Priority Reason
+        <span id="reasonRequiredMark" class="text-danger d-none">*</span>
+      </label>
+      <input type="text" name="high_priority_reason" id="high_priority_reason"
+             class="form-control" placeholder="Required only if Priority = High"
+             value="{{ form.get('high_priority_reason','') }}">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Description *</label>
+    <div id="editor" style="height:250px; background:white;"></div>
+    <input type="hidden" name="description_html" id="description_html">
+  </div>
+
+  <div class="row">
+    <div class="col-md-6 mb-3">
+      <label class="form-label">CC <span class="text-muted">(optional)</span></label>
+      <input type="text" name="cc" class="form-control" placeholder="comma-separated emails">
+    </div>
+    <div class="col-md-6 mb-3">
+      <label class="form-label">BCC <span class="text-muted">(optional)</span></label>
+      <input type="text" name="bcc" class="form-control" placeholder="comma-separated emails">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Attachments <span class="text-muted">(optional)</span></label>
+    <input type="file" name="attachments" class="form-control" multiple>
+  </div>
+
+  <button type="submit" class="btn btn-primary">Submit Ticket</button>
+</form>
+
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+  // Full Gmail-style formatting toolbar: bold/italic/underline/strike,
+  // headers, lists, indent, links, images, color, alignment, code-block.
+  const quill = new Quill('#editor', {
+    theme: 'snow',
+    placeholder: 'Describe your data request in as much detail as needed...',
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ align: [] }],
+        ['blockquote', 'code-block'],
+        ['link', 'image'],
+        ['clean'],
+      ]
+    }
+  });
+
+  const prioritySel = document.getElementById('priority');
+  const reasonInput = document.getElementById('high_priority_reason');
+  const reasonMark = document.getElementById('reasonRequiredMark');
+
+  function syncReasonRequirement() {
+    const isHigh = prioritySel.value === 'High';
+    reasonInput.required = isHigh;
+    reasonMark.classList.toggle('d-none', !isHigh);
+  }
+  prioritySel.addEventListener('change', syncReasonRequirement);
+  syncReasonRequirement();
+
+  document.getElementById('ticketForm').addEventListener('submit', function (e) {
+    document.getElementById('description_html').value = quill.root.innerHTML;
+    if (quill.getText().trim().length === 0) {
+      e.preventDefault();
+      alert('Description cannot be empty.');
+    }
+  });
+</script>
+{% endblock %}

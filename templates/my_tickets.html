@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>My Tickets</h3>
+  <a href="{{ url_for('new_ticket') }}" class="btn btn-primary">+ New Ticket</a>
+</div>
+
+<table class="table table-hover table-bordered bg-white">
+  <thead class="table-light">
+    <tr>
+      <th>Ticket ID</th><th>Subject</th><th>Priority</th><th>Status</th>
+      <th>Assigned To</th><th>Created</th><th>Updated</th><th>Closed</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for t in tickets %}
+    <tr>
+      <td>{{ t['Ticket ID'] }}</td>
+      <td>{{ t['Subject'] }}</td>
+      <td><span class="badge bg-{{ 'danger' if t['Priority']=='High' else ('warning' if t['Priority']=='Medium' else 'secondary') }}">{{ t['Priority'] }}</span></td>
+      <td><span class="badge bg-info text-dark">{{ t['Status'] }}</span></td>
+      <td>{{ t['Assigned To'] or '—' }}</td>
+      <td>{{ t['Created Date'] }}</td>
+      <td>{{ t['Updated Date'] }}</td>
+      <td>{{ t['Closed Date'] or '—' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="text-center text-muted">No tickets yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

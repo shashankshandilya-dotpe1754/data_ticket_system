@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('dashboard') }}" class="btn btn-link">← Dashboard</a>
+<h3>{{ ticket['Ticket ID'] }} — {{ ticket['Subject'] }}</h3>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <p><b>Requestor:</b> {{ ticket['Requestor Email'] }}</p>
+    <p><b>Priority:</b> {{ ticket['Priority'] }}
+      {% if ticket['High Priority Reason'] %} — {{ ticket['High Priority Reason'] }}{% endif %}</p>
+    <p><b>Created:</b> {{ ticket['Created Date'] }} &nbsp; <b>Updated:</b> {{ ticket['Updated Date'] }}
+       &nbsp; <b>Closed:</b> {{ ticket['Closed Date'] or '—' }}</p>
+    <p><b>Attachments:</b> {{ ticket['Attachment'] or 'None' }}</p>
+    <hr>
+    <b>Description:</b>
+    <div class="border rounded p-3 bg-light">{{ ticket['Requestor Description'] | safe }}</div>
+    {% if ticket['Acceptor Description'] %}
+    <hr>
+    <b>Acceptor Notes:</b>
+    <div class="border rounded p-3 bg-light" style="white-space:pre-wrap">{{ ticket['Acceptor Description'] }}</div>
+    {% endif %}
+  </div>
+</div>
+
+<form method="POST" action="{{ url_for('update_ticket', ticket_id=ticket['Ticket ID']) }}">
+  <div class="row">
+    <div class="col-md-4 mb-3">
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if ticket['Status']==s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4 mb-3">
+      <label class="form-label">Assign / Transfer To</label>
+      <select name="assigned_to" class="form-select">
+        <option value="">Unassigned</option>
+        {% for a in acceptors %}
+          <option value="{{ a }}" {% if ticket['Assigned To']==a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Add Note (emailed to requestor in the same thread)</label>
+    <textarea name="acceptor_description" class="form-control" rows="4"></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">Save & Notify Requestor</button>
+</form>
+{% endblock %}
