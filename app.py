@@ -18,7 +18,6 @@ from werkzeug.utils import secure_filename
 
 import config
 import auth
-from authlib.integrations.flask_client.errors import OAuthError
 import gmail_utils
 import sheets_utils
 import team_status
