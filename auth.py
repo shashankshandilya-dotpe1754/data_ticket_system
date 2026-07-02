@@ -16,118 +16,85 @@ encrypted database table (see README.md "Productionizing" section).
 Handles "Login with Gmail" for both requestors and acceptors.
 """
 
-import os
-import json
-import auth
+
+"""
+Google OAuth helper functions.
+Uses OAuth client JSON from Render Environment Variable:
+CLIENT_SECRET_JSON
+"""
+
+from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import Flow
-from googleapiclient.discovery import build
-
+import requests
 import config
 
-TOKENS_DIR = os.path.join(os.path.dirname(__file__), ".tokens")
-os.makedirs(TOKENS_DIR, exist_ok=True)
 
-
-def _token_path(email: str):
-    safe = email.replace("/", "_").replace("\\", "_")
-    return os.path.join(TOKENS_DIR, f"{safe}.json")
-
-
-# --------------------------------------------------------
-# OAuth Flow
-# --------------------------------------------------------
-from google_auth_oauthlib.flow import Flow
 def build_flow(state=None):
+    """
+    Build OAuth flow from JSON stored in config.CLIENT_CONFIG
+    """
 
-    flow = Flow.from_client_secrets_file(
-    config.CLIENT_SECRETS_FILE,
-    scopes=config.SCOPES,
-    state=state
-)
+    if config.CLIENT_CONFIG is None:
+        raise Exception(
+            "CLIENT_SECRET_JSON environment variable is missing."
+        )
 
+    flow = Flow.from_client_config(
+        config.CLIENT_CONFIG,
+        scopes=config.SCOPES,
+        state=state,
+    )
 
     flow.redirect_uri = config.OAUTH_REDIRECT_URI
 
     return flow
 
 
-# --------------------------------------------------------
-# Save Token
-# --------------------------------------------------------
+def credentials_from_session(session):
+    """
+    Rebuild Google Credentials from Flask session.
+    """
 
-def save_credentials(email: str, creds: Credentials):
-
-    with open(_token_path(email), "w") as f:
-        f.write(creds.to_json())
-
-
-# --------------------------------------------------------
-# Load Token
-# --------------------------------------------------------
-
-def load_credentials(email: str):
-
-    path = _token_path(email)
-
-    if not os.path.exists(path):
+    if "credentials" not in session:
         return None
 
-    with open(path, "r") as f:
-        data = json.load(f)
-
-    creds = Credentials.from_authorized_user_info(
-        data,
-        scopes=config.SCOPES,
-    )
+    creds = Credentials(**session["credentials"])
 
     if creds.expired and creds.refresh_token:
-        try:
-            creds.refresh(Request())
-            save_credentials(email, creds)
-        except Exception:
-            return None
+        creds.refresh(Request())
+        session["credentials"] = credentials_to_dict(creds)
 
     return creds
 
 
-# --------------------------------------------------------
-# Gmail Address
-# --------------------------------------------------------
+def credentials_to_dict(creds):
+    """
+    Convert Credentials object into session dictionary.
+    """
 
-def get_user_email(creds):
+    return {
+        "token": creds.token,
+        "refresh_token": creds.refresh_token,
+        "token_uri": creds.token_uri,
+        "client_id": creds.client_id,
+        "client_secret": creds.client_secret,
+        "scopes": creds.scopes,
+    }
 
-    service = build(
-        "oauth2",
-        "v2",
-        credentials=creds,
+
+def get_user_email(credentials):
+    """
+    Return authenticated Gmail address.
+    """
+
+    response = requests.get(
+        "https://openidconnect.googleapis.com/v1/userinfo",
+        headers={
+            "Authorization": f"Bearer {credentials.token}"
+        },
     )
 
-    profile = service.userinfo().get().execute()
+    response.raise_for_status()
 
-    return profile["email"]
-
-
-# --------------------------------------------------------
-# Acceptor Check
-# --------------------------------------------------------
-
-def is_acceptor(email):
-
-    return email.lower() in [
-        x.lower()
-        for x in config.ACCEPTORS
-    ]
-
-
-# --------------------------------------------------------
-# Delete Token
-# --------------------------------------------------------
-
-def delete_credentials(email):
-
-    path = _token_path(email)
-
-    if os.path.exists(path):
-        os.remove(path)
+    return response.json()["email"]
