@@ -33,8 +33,9 @@ import config
 def build_flow(state=None):
 
     print("=" * 80)
-    print("CLIENT CONFIG")
-    print(config.CLIENT_CONFIG)
+    print("AUTH URI :", config.CLIENT_CONFIG["web"]["auth_uri"])
+    print("TOKEN URI:", config.CLIENT_CONFIG["web"]["token_uri"])
+    print("REDIRECT :", config.CLIENT_CONFIG["web"]["redirect_uris"])
     print("=" * 80)
 
     flow = Flow.from_client_config(
