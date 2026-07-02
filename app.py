@@ -408,36 +408,24 @@ def new_ticket():
 
         )
 
-        ticket = {
-    "Ticket ID": ticket_id,
-    "Created Date": now_string,
-    "Requestor Email": email,
-    "Subject": subject,
-    "Requestor Description": description_html,
-    "Priority": priority,
-    "High Priority Reason": high_priority_reason,
-    "Status": "Open",
-    "Assigned To": "",
-    "Attachment": ", ".join(attachment_names),
-    "Updated Date": now_string,
-    "Closed Date": "",
-    "Acceptor Description": "",
-    "Thread Id": sent["thread_id"],
-    "RFC Message Id": rfc_message_id,
-}
-sheets_utils.append_ticket(creds, ticket)
-
-        _remember_thread(
-
-            ticket_id,
-
-            sent["thread_id"],
-
-            rfc_message_id,
-
-            email
-
-        )
+ticket = {
+            "Ticket ID": ticket_id,
+            "Created Date": now_string,
+            "Requestor Email": email,
+            "Subject": subject,
+            "Requestor Description": description_html,
+            "Priority": priority,
+            "High Priority Reason": high_priority_reason,
+            "Status": "Open",
+            "Assigned To": "",
+            "Attachment": ", ".join(attachment_names),
+            "Updated Date": now_string,
+            "Closed Date": "",
+            "Acceptor Description": "",
+            "Thread Id": sent["thread_id"],
+            "RFC Message Id": rfc_message_id,
+        }
+        sheets_utils.append_ticket(creds, ticket)
 
         flash(
 
