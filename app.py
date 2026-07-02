@@ -121,7 +121,10 @@ def login():
     )
 
     return auth.google().authorize_redirect(
-        redirect_uri
+        redirect_uri,
+        access_type="offline",
+        prompt="consent",
+        include_granted_scopes="true",
     )
 
 # ==========================================================
@@ -132,6 +135,10 @@ def login():
 def oauth2callback():
 
     token = auth.google().authorize_access_token()
+
+    print("=" * 80)
+    print(token)
+    print("=" * 80)
 
     session["credentials"] = {
         "token": token["access_token"],
