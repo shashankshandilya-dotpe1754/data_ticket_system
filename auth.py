@@ -1,72 +1,37 @@
 """
-Handles "Login with Gmail" for both requestors and acceptors.
+Handles "Login with Gmail" for both requestors and acceptors, on Render.
 
-Each logged-in user's OAuth token is kept server-side in a small per-user
-JSON file under .tokens/ (keyed by their email) and referenced from the
-Flask session by email only. This means:
-  - Every email the system sends is sent using THAT user's own Gmail
-    account (so it carries their real signature, "from" address, etc).
-  - No shared/service credentials are used for sending mail.
-
-NOTE: for a production deployment, swap the flat-file token store for an
-encrypted database table (see README.md "Productionizing" section).
-"""
-
-"""
-Handles "Login with Gmail" for both requestors and acceptors.
-"""
-
-
-"""
-Google OAuth helper functions.
-Uses OAuth client JSON from Render Environment Variable:
-CLIENT_SECRET_JSON
+Credentials are stored as a plain dict in the Flask session (signed
+cookie). The dict MUST contain every field google-auth needs to refresh
+an expired access token on its own:
+    token, refresh_token, token_uri, client_id, client_secret, scopes
 """
 
 import requests
-from authlib.integrations.flask_client import OAuth
+from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
 
 import config
 
-oauth = OAuth()
 
-
-def init_oauth(app):
-    oauth.init_app(app)
-
-    oauth.register(
-        name="google",
-        client_id=config.CLIENT_CONFIG["web"]["client_id"],
-        client_secret=config.CLIENT_CONFIG["web"]["client_secret"],
-        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-        client_kwargs={
-            "scope": " ".join(config.SCOPES)
-        },
+def build_flow(state=None):
+    if not config.CLIENT_CONFIG:
+        raise RuntimeError(
+            "CLIENT_SECRET_JSON environment variable is not set or "
+            "could not be parsed as JSON. Check it in Render's "
+            "Environment tab."
+        )
+    flow = Flow.from_client_config(
+        config.CLIENT_CONFIG,
+        scopes=config.SCOPES,
+        state=state,
     )
+    flow.redirect_uri = config.OAUTH_REDIRECT_URI
+    return flow
 
 
-def google():
-    return oauth.google
-
-
-def credentials_from_session(session):
-
-    if "credentials" not in session:
-        return None
-
-    creds = Credentials(**session["credentials"])
-
-    if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-        session["credentials"] = credentials_to_dict(creds)
-
-    return creds
-
-
-def credentials_to_dict(creds):
-
+def credentials_to_dict(creds: Credentials) -> dict:
     return {
         "token": creds.token,
         "refresh_token": creds.refresh_token,
@@ -77,18 +42,32 @@ def credentials_to_dict(creds):
     }
 
 
-def get_user_email(access_token):
+def credentials_from_dict(data: dict):
+    if not data or not data.get("refresh_token"):
+        return None
 
-    response = requests.get(
-        "https://openidconnect.googleapis.com/v1/userinfo",
-        headers={
-            "Authorization": f"Bearer {access_token}"
-        },
+    creds = Credentials(
+        token=data.get("token"),
+        refresh_token=data.get("refresh_token"),
+        token_uri=data.get("token_uri"),
+        client_id=data.get("client_id"),
+        client_secret=data.get("client_secret"),
+        scopes=data.get("scopes"),
     )
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    return creds
 
-    response.raise_for_status()
 
-    return response.json()["email"]
+def get_user_email(creds: Credentials) -> str:
+    resp = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {creds.token}"},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()["email"]
 
-def is_acceptor(email):
+
+def is_acceptor(email: str) -> bool:
     return config.is_acceptor_email(email)
