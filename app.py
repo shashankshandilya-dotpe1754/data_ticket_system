@@ -1050,14 +1050,25 @@ def update_ticket(ticket_id):
 
         attachments = request.files.getlist("attachments")
 
+       attachments = []
+
+for file in request.files.getlist("attachments"):
+    if file.filename:
+        attachments.append({
+            "filename": file.filename,
+            "data": file.read()
+        })
+        
         gmail_utils.send_threaded_reply(
-           credentials=creds,
-            to_email=requestor_email,
-            subject=subject,
-            html_body=email_html,
-            thread_id=ticket["Thread ID"],
+            service=gmail_svc,
+            to=ticket["Requestor Email"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            thread_id=ticket["Thread Id"],
+            rfc_message_id=ticket["RFC Message Id"],
+            cc=",".join(default_cc) if default_cc else None,
             attachments=attachments
-        ) 
+        )
 
     else:
 
