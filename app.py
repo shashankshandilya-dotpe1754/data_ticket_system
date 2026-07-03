@@ -1067,6 +1067,14 @@ def update_ticket(ticket_id):
 
     if thread.get("thread_id") and thread.get("rfc_message_id"):
 
+        print("=" * 60)
+        print("Thread ID :", thread["thread_id"])
+        print("RFC ID    :", thread["rfc_message_id"])
+        print("Subject   :", ticket["Subject"])
+        print("To        :", ticket["Requestor Email"])
+        print("Attachments :", len(attachments))
+        print("=" * 60)
+
         gmail_utils.send_threaded_reply(
             service=gmail_svc,
             to=ticket["Requestor Email"],
