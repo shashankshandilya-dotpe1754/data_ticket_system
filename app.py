@@ -1048,15 +1048,16 @@ def update_ticket(ticket_id):
 
     if thread.get("thread_id") and thread.get("rfc_message_id"):
 
+        attachments = request.files.getlist("attachments")
+
         gmail_utils.send_threaded_reply(
-            service=gmail_svc,
-            to=ticket["Requestor Email"],
-            subject=f"[{ticket_id}] {ticket['Subject']}",
-            html_body=body,
-            thread_id=thread["thread_id"],
-            rfc_message_id=thread["rfc_message_id"],
-            cc=",".join(default_cc) if default_cc else None,
-        )
+           credentials=creds,
+            to_email=requestor_email,
+            subject=subject,
+            html_body=email_html,
+            thread_id=ticket["Thread ID"],
+            attachments=attachments
+        ) 
 
     else:
 
