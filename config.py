@@ -4,6 +4,7 @@ Central configuration for the Data Team Ticket System.
 
 import os
 import json
+from datetime import timedelta
 
 # ==========================================================
 # BASE DIRECTORY
@@ -55,7 +56,7 @@ SPREADSHEET_ID = "1eRoIFbmEqZ40oKVKwb2vuE1VUyuUDWIr3sRnKT9mSt0"
 
 SHEET_NAME = "Tickets"
 
-SHEET_RANGE = f"{SHEET_NAME}!A:M"
+SHEET_RANGE = f"{SHEET_NAME}!A:O"
 
 COLUMNS = [
     "Ticket ID",
@@ -72,7 +73,7 @@ COLUMNS = [
     "Closed Date",
     "Acceptor Description",
     "Thread Id",
-    "RFC Message Id", 
+    "RFC Message Id",
 ]
 
 # ==========================================================
@@ -153,6 +154,11 @@ SECRET_KEY = os.environ.get(
     "FLASK_SECRET_KEY",
     "change-this-to-a-random-secret"
 )
+
+# Keep the login session alive until the user explicitly logs out,
+# instead of expiring the moment the browser is closed (Flask's default
+# is a non-permanent, browser-session-only cookie).
+PERMANENT_SESSION_LIFETIME = timedelta(days=30)
 
 UPLOAD_FOLDER = os.path.join(
     BASE_DIR,
