@@ -530,11 +530,7 @@ def dashboard():
 
     sheets_svc = sheets_utils.sheets_service(creds)
 
-    tickets = sheets_utils.get_all_tickets(service)
-    ticket = next(
-        x for x in tickets
-        if x["Ticket ID"] == ticket_id
-    )
+    tickets = sheets_utils.get_all_tickets(sheets_svc)
 
     # --------------------------------------------
     # Filters
@@ -848,7 +844,7 @@ def update_ticket(ticket_id):
     ).strip()
 
     acceptor_description_text = BeautifulSoup(
-        acceptor_description,
+        acceptor_note_html,
         "html.parser"
     ).get_text("\n")
 
@@ -941,8 +937,16 @@ def update_ticket(ticket_id):
 </div>
 """
 
+        existing = ticket.get("Acceptor Description", "")
+        
+        entry = (
+            f"{now_string} - {email}\n"
+            f"{acceptor_description_text}\n"
+            "-----------------------------------\n"
+        )
+        
         updates["Acceptor Description"] = (
-            entry_html + existing if existing else entry_html
+            existing + "\n" + entry if existing else entry
         )
 
         email_changes.append(
