@@ -444,7 +444,7 @@ def new_ticket():
             "Attachment": ", ".join(attachment_names),
             "Updated Date": now_string,
             "Closed Date": "",
-            "Acceptor Description": "",
+            "Acceptor Description": description_text,
             "Thread Id": sent["thread_id"],
             "RFC Message Id": rfc_message_id,
         }
@@ -999,101 +999,70 @@ def update_ticket(ticket_id):
 
     )
 
-    # --------------------------------------------
+        # --------------------------------------------
     # Gmail Thread
     # --------------------------------------------
-    # Thread info is read straight from the ticket's own Sheet row
-    # (Thread Id / RFC Message Id columns) rather than a local file,
-    # so it survives Render restarts/redeploys.
 
     thread = {
         "thread_id": ticket.get("Thread Id"),
         "rfc_message_id": ticket.get("RFC Message Id"),
     }
 
-    signature = gmail_utils.get_signature(
-
-        gmail_svc
-
-    )
+    signature = gmail_utils.get_signature(gmail_svc)
 
     update_html = ""
 
     if email_changes:
-
         update_html = "<ul>"
-
-        update_html += "".join(
-
-            email_changes
-
-        )
-
+        update_html += "".join(email_changes)
         update_html += "</ul>"
 
     note_html = ""
 
     if not note_is_empty:
-
         note_html = f"""
-
-<hr>
-
-<b>Comment</b>
-
-<br><br>
-
-{acceptor_note_html}
-
-"""
+        <hr>
+        <b>Comment</b><br><br>
+        {acceptor_note_html}
+        """
 
     body = f"""
+    <h3>Ticket Updated</h3>
 
-<h3>
+    <p><b>Ticket ID :</b> {ticket_id}</p>
 
-Ticket Updated
+    {update_html}
 
-</h3>
+    {note_html}
 
-<p>
+    <br><br>
 
-<b>Ticket ID :</b>
+    {signature}
+    """
 
-{ticket_id}
-
-</p>
-
-{update_html}
-
-{note_html}
-
-<br><br>
-
-{signature}
-
-"""
+    default_cc = config.default_cc_for_assignee(new_assignee)
 
     if thread.get("thread_id") and thread.get("rfc_message_id"):
 
-    gmail_utils.send_threaded_reply(
-        service=gmail_svc,
-        to=ticket["Requestor Email"],
-        subject=f"[{ticket_id}] {ticket['Subject']}",
-        html_body=body,
-        thread_id=thread["thread_id"],
-        rfc_message_id=thread["rfc_message_id"],
-        cc=",".join(default_cc) if default_cc else None,
-    )
+        gmail_utils.send_threaded_reply(
+            service=gmail_svc,
+            to=ticket["Requestor Email"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            thread_id=thread["thread_id"],
+            rfc_message_id=thread["rfc_message_id"],
+            cc=",".join(default_cc) if default_cc else None,
+        )
 
-else:
+    else:
 
-    gmail_utils.send_new_ticket_email(
-        service=gmail_svc,
-        to=ticket["Requestor Email"],
-        subject=f"[{ticket_id}] {ticket['Subject']}",
-        html_body=body,
-        cc=",".join(default_cc) if default_cc else None,
-    )
+        gmail_utils.send_new_ticket_email(
+            service=gmail_svc,
+            to=ticket["Requestor Email"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            cc=",".join(default_cc) if default_cc else None,
+        )
 
     # --------------------------------------------
     # Success
