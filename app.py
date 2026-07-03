@@ -280,7 +280,10 @@ def new_ticket():
             sheets_svc
         )
 
-        now = datetime.datetime.now()
+        from zoneinfo import ZoneInfo
+        now = datetime.datetime.now(
+            ZoneInfo("Asia/Kolkata")
+        )
 
         now_string = now.strftime(
             "%Y-%m-%d %H:%M:%S"
