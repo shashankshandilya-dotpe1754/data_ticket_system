@@ -27,6 +27,11 @@ app.secret_key = config.SECRET_KEY
 
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
 
+# Requirement 1: stay logged in until explicit logout, instead of Flask's
+# default (a session cookie that dies the moment the browser closes).
+app.config["PERMANENT_SESSION_LIFETIME"] = config.PERMANENT_SESSION_LIFETIME
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+
 os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 
 
@@ -128,6 +133,11 @@ def oauth2callback():
     flow.fetch_token(authorization_response=request.url)
     creds = flow.credentials
     email = auth.get_user_email(creds)
+
+    # Requirement 1: mark this session permanent BEFORE writing to it, so
+    # the browser stores it as a long-lived cookie (PERMANENT_SESSION_LIFETIME)
+    # instead of a session-only cookie that dies on browser close.
+    session.permanent = True
 
     session["credentials"] = auth.credentials_to_dict(creds)
     session["email"] = email
@@ -254,11 +264,20 @@ def new_ticket():
             )
 
         # -----------------------------------------
+        # Build ONE Sheets client and ONE Gmail client for this whole
+        # request, and reuse them everywhere below (memory fix — the old
+        # code built a fresh client for nearly every single call).
+        # -----------------------------------------
+
+        sheets_svc = sheets_utils.sheets_service(creds)
+        gmail_svc = gmail_utils.gmail_service(creds)
+
+        # -----------------------------------------
         # Ticket
         # -----------------------------------------
 
         ticket_id = sheets_utils.next_ticket_id(
-            creds
+            sheets_svc
         )
 
         now = datetime.datetime.now()
@@ -311,10 +330,6 @@ def new_ticket():
         # -----------------------------------------
         # Email
         # -----------------------------------------
-
-        # Build the Gmail API client ONCE for this request and reuse it
-        # below, instead of building it fresh in each helper call.
-        gmail_svc = gmail_utils.gmail_service(creds)
 
         signature = gmail_utils.get_signature(
             gmail_svc
@@ -426,7 +441,7 @@ def new_ticket():
             "Thread Id": sent["thread_id"],
             "RFC Message Id": rfc_message_id,
         }
-        sheets_utils.append_ticket(creds, ticket)
+        sheets_utils.append_ticket(sheets_svc, ticket)
 
         flash(
 
@@ -461,10 +476,12 @@ def my_tickets():
 
     email, creds = current_user()
 
+    sheets_svc = sheets_utils.sheets_service(creds)
+
     tickets = []
 
     for ticket in sheets_utils.get_all_tickets(
-        creds
+        sheets_svc
     ):
 
         if ticket.get(
@@ -504,7 +521,9 @@ def dashboard():
 
     email, creds = current_user()
 
-    tickets = sheets_utils.get_all_tickets(creds)
+    sheets_svc = sheets_utils.sheets_service(creds)
+
+    tickets = sheets_utils.get_all_tickets(sheets_svc)
 
     # --------------------------------------------
     # Filters
@@ -676,9 +695,11 @@ def ticket_detail(ticket_id):
 
     email, creds = current_user()
 
+    sheets_svc = sheets_utils.sheets_service(creds)
+
     ticket = sheets_utils.get_ticket(
 
-        creds,
+        sheets_svc,
 
         ticket_id
 
@@ -783,8 +804,12 @@ def update_ticket(ticket_id):
 
     email, creds = current_user()
 
+    # ONE Sheets client and ONE Gmail client for this whole request.
+    sheets_svc = sheets_utils.sheets_service(creds)
+    gmail_svc = gmail_utils.gmail_service(creds)
+
     ticket = sheets_utils.get_ticket(
-        creds,
+        sheets_svc,
         ticket_id,
     )
 
@@ -804,10 +829,16 @@ def update_ticket(ticket_id):
         old_assignee,
     )
 
-    acceptor_note = request.form.get(
-        "acceptor_description",
+    # Requirement 2: this now arrives as rich-text HTML from the Quill
+    # editor in ticket_detail.html, same as the ticket description box.
+    acceptor_note_html = request.form.get(
+        "acceptor_description_html",
         ""
     ).strip()
+
+    # Quill's "empty" state is literally "<p><br></p>", not "" — treat
+    # that as no note too.
+    note_is_empty = acceptor_note_html in ("", "<p><br></p>")
 
     now = datetime.datetime.now()
 
@@ -874,10 +905,10 @@ def update_ticket(ticket_id):
         )
 
     # --------------------------------------------
-    # Notes
+    # Notes (now rich-text HTML, appended as a timestamped entry)
     # --------------------------------------------
 
-    if acceptor_note:
+    if not note_is_empty:
 
         existing = ticket.get(
 
@@ -887,25 +918,16 @@ def update_ticket(ticket_id):
 
         )
 
-        history = f"""
-
-[{now_string}]
-
-{email}
-
-{acceptor_note}
-
+        entry_html = f"""
+<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #ddd;">
+  <div style="color:#666;font-size:0.85em;margin-bottom:4px;">{now_string} — {email}</div>
+  {acceptor_note_html}
+</div>
 """
 
-        if existing:
-
-            history = existing + "\n" + history
-
-        updates[
-
-            "Acceptor Description"
-
-        ] = history
+        updates["Acceptor Description"] = (
+            entry_html + existing if existing else entry_html
+        )
 
         email_changes.append(
 
@@ -946,29 +968,32 @@ def update_ticket(ticket_id):
     # --------------------------------------------
     # Update Google Sheet
     # --------------------------------------------
+    # Passing `ticket=ticket` (already fetched above) avoids re-reading
+    # the entire sheet a second time just to find this row again.
 
     sheets_utils.update_ticket_fields(
 
-        creds,
+        sheets_svc,
 
         ticket_id,
 
         updates,
+
+        ticket=ticket,
 
     )
 
     # --------------------------------------------
     # Gmail Thread
     # --------------------------------------------
+    # Thread info is read straight from the ticket's own Sheet row
+    # (Thread Id / RFC Message Id columns) rather than a local file,
+    # so it survives Render restarts/redeploys.
 
     thread = {
         "thread_id": ticket.get("Thread Id"),
         "rfc_message_id": ticket.get("RFC Message Id"),
     }
-
-    # Build the Gmail API client ONCE for this request and reuse it
-    # below, instead of building it fresh in each helper call.
-    gmail_svc = gmail_utils.gmail_service(creds)
 
     signature = gmail_utils.get_signature(
 
@@ -992,7 +1017,7 @@ def update_ticket(ticket_id):
 
     note_html = ""
 
-    if acceptor_note:
+    if not note_is_empty:
 
         note_html = f"""
 
@@ -1002,7 +1027,7 @@ def update_ticket(ticket_id):
 
 <br><br>
 
-{acceptor_note}
+{acceptor_note_html}
 
 """
 
@@ -1095,6 +1120,7 @@ Ticket Updated
         )
 
     )
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
