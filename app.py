@@ -14,7 +14,7 @@ from flask import (
 )
 
 from werkzeug.utils import secure_filename
-
+from bs4 import BeautifulSoup
 import config
 import auth
 import gmail_utils
@@ -199,6 +199,10 @@ def new_ticket():
             "description_html",
             ""
         )
+        description_text = BeautifulSoup(
+            description_html,
+            "html.parser"
+        ).get_text("\n")
 
         priority = request.form.get(
             "priority",
@@ -432,7 +436,7 @@ def new_ticket():
             "Created Date": now_string,
             "Requestor Email": email,
             "Subject": subject,
-            "Requestor Description": description_html,
+            "Requestor Description": description_text,
             "Priority": priority,
             "High Priority Reason": high_priority_reason,
             "Status": "Open",
@@ -526,7 +530,11 @@ def dashboard():
 
     sheets_svc = sheets_utils.sheets_service(creds)
 
-    tickets = sheets_utils.get_all_tickets(sheets_svc)
+    tickets = sheets_utils.get_all_tickets(service)
+    ticket = next(
+        x for x in tickets
+        if x["Ticket ID"] == ticket_id
+    )
 
     # --------------------------------------------
     # Filters
@@ -838,6 +846,11 @@ def update_ticket(ticket_id):
         "acceptor_description_html",
         ""
     ).strip()
+
+    acceptor_description_text = BeautifulSoup(
+        acceptor_description,
+        "html.parser"
+    ).get_text("\n")
 
     # Quill's "empty" state is literally "<p><br></p>", not "" — treat
     # that as no note too.
