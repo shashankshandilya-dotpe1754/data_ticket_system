@@ -1062,43 +1062,25 @@ Ticket Updated
 
     if thread.get("thread_id") and thread.get("rfc_message_id"):
 
-        default_cc = config.default_cc_for_assignee(
+    gmail_utils.send_threaded_reply(
+        service=gmail_svc,
+        to=ticket["Requestor Email"],
+        subject=f"[{ticket_id}] {ticket['Subject']}",
+        html_body=body,
+        thread_id=thread["thread_id"],
+        rfc_message_id=thread["rfc_message_id"],
+        cc=",".join(default_cc) if default_cc else None,
+    )
 
-            new_assignee
+else:
 
-        )
-
-        gmail_utils.send_threaded_reply(
-
-            service=gmail_svc,
-
-            to=ticket["Requestor Email"],
-
-            subject=f"[{ticket_id}] {ticket['Subject']}",
-
-            html_body=body,
-
-            thread_id=thread["thread_id"],
-
-            rfc_message_id=thread["rfc_message_id"],
-
-            cc=",".join(default_cc)
-
-            if default_cc else None,
-
-        )
-
-    else:
-
-        flash(
-
-            "Ticket updated, but no thread info was found for this "
-            "ticket (likely created before the Thread Id/RFC Message Id "
-            "columns were added) — the requestor was not emailed.",
-
-            "warning"
-
-        )
+    gmail_utils.send_new_ticket_email(
+        service=gmail_svc,
+        to=ticket["Requestor Email"],
+        subject=f"[{ticket_id}] {ticket['Subject']}",
+        html_body=body,
+        cc=",".join(default_cc) if default_cc else None,
+    )
 
     # --------------------------------------------
     # Success
