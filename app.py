@@ -1003,7 +1003,7 @@ def update_ticket(ticket_id):
 
     )
 
-        # --------------------------------------------
+       # --------------------------------------------
     # Gmail Thread
     # --------------------------------------------
 
@@ -1046,28 +1046,36 @@ def update_ticket(ticket_id):
 
     default_cc = config.default_cc_for_assignee(new_assignee)
 
+    # --------------------------------------------
+    # Read uploaded attachments
+    # --------------------------------------------
+
+    attachments = []
+
+    for file in request.files.getlist("attachments"):
+
+        if file and file.filename:
+
+            attachments.append({
+                "filename": file.filename,
+                "data": file.read()
+            })
+
+    # --------------------------------------------
+    # Send mail
+    # --------------------------------------------
+
     if thread.get("thread_id") and thread.get("rfc_message_id"):
 
-        attachments = request.files.getlist("attachments")
-
-       attachments = []
-
-for file in request.files.getlist("attachments"):
-    if file.filename:
-        attachments.append({
-            "filename": file.filename,
-            "data": file.read()
-        })
-        
         gmail_utils.send_threaded_reply(
             service=gmail_svc,
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
-            thread_id=ticket["Thread Id"],
-            rfc_message_id=ticket["RFC Message Id"],
+            thread_id=thread["thread_id"],
+            rfc_message_id=thread["rfc_message_id"],
             cc=",".join(default_cc) if default_cc else None,
-            attachments=attachments
+            attachments=attachments,
         )
 
     else:
@@ -1078,6 +1086,7 @@ for file in request.files.getlist("attachments"):
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
             cc=",".join(default_cc) if default_cc else None,
+            attachments=attachments,
         )
 
     # --------------------------------------------
