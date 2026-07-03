@@ -17,12 +17,12 @@
     {% if ticket['Acceptor Description'] %}
     <hr>
     <b>Acceptor Notes:</b>
-    <div class="border rounded p-3 bg-light" style="white-space:pre-wrap">{{ ticket['Acceptor Description'] }}</div>
+    <div class="border rounded p-3 bg-light">{{ ticket['Acceptor Description'] | safe }}</div>
     {% endif %}
   </div>
 </div>
 
-<form method="POST" action="{{ url_for('update_ticket', ticket_id=ticket['Ticket ID']) }}">
+<form method="POST" action="{{ url_for('update_ticket', ticket_id=ticket['Ticket ID']) }}" id="updateForm">
   <div class="row">
     <div class="col-md-4 mb-3">
       <label class="form-label">Status</label>
@@ -42,10 +42,42 @@
       </select>
     </div>
   </div>
+
   <div class="mb-3">
-    <label class="form-label">Add Note (emailed to requestor in the same thread)</label>
-    <textarea name="acceptor_description" class="form-control" rows="4"></textarea>
+    <label class="form-label">Add Note <span class="text-muted">(optional — emailed to requestor in the same thread)</span></label>
+    <div id="noteEditor" style="height:180px; background:white;"></div>
+    <input type="hidden" name="acceptor_description_html" id="acceptor_description_html">
   </div>
-  <button type="submit" class="btn btn-primary">Save & Notify Requestor</button>
+
+  <button type="submit" class="btn btn-primary">Save &amp; Notify Requestor</button>
 </form>
+
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+  // Same Gmail-style formatting toolbar as the New Ticket description box:
+  // bold/italic/underline/strike, headers, lists, indent, links, images,
+  // color, alignment, blockquote/code, clear formatting.
+  const noteQuill = new Quill('#noteEditor', {
+    theme: 'snow',
+    placeholder: 'Add an update for the requestor (optional)...',
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ align: [] }],
+        ['blockquote', 'code-block'],
+        ['link', 'image'],
+        ['clean'],
+      ]
+    }
+  });
+
+  document.getElementById('updateForm').addEventListener('submit', function () {
+    document.getElementById('acceptor_description_html').value = noteQuill.root.innerHTML;
+  });
+</script>
 {% endblock %}
