@@ -97,8 +97,32 @@ def send_new_ticket_email(service, to, subject, html_body, cc=None, bcc=None,
             "message_id": sent["id"]}
 
 
-def send_threaded_reply(service, to, subject, html_body, thread_id,
-                         rfc_message_id, cc=None, bcc=None, attachments=None):
+def send_threaded_reply(
+    credentials,
+    to_email,
+    subject,
+    html_body,
+    thread_id=None,
+    attachments=None,
+):
+    if attachments:
+
+    for file in attachments:
+
+        if not file or file.filename == "":
+            continue
+
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(file.read())
+        encoders.encode_base64(part)
+
+        part.add_header(
+            "Content-Disposition",
+            f'attachment; filename="{file.filename}"'
+        )
+
+        message.attach(part)
+
     """Sends a reply that Gmail will display in the SAME conversation
     thread as the original ticket email."""
     if not subject.lower().startswith("re:"):
