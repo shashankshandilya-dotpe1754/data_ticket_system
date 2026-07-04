@@ -1,95 +1,136 @@
 """
-Handles "Login with Gmail" for both requestors and acceptors, on Render.
+Gmail operations using plain `requests` calls to the Gmail REST API.
 
-Two real bugs fixed here:
-1. `expiry` was never stored/restored, so Credentials.expired always
-   evaluated False (google-auth's default when no expiry is set) — a
-   stale ~1hr-old access token would never get refreshed.
-2. If Google has actually revoked/expired the refresh token itself
-   (invalid_grant — commonly happens when the OAuth consent screen is
-   still in "Testing" mode, which caps refresh tokens at 7 days), the
-   old code let that exception bubble up as an unhandled 500. Now it's
-   caught and treated as "not logged in", so the person is sent back to
-   /login instead of seeing a crash.
+Token refresh happens ONCE per request, in auth.credentials_from_dict()
+(called from app.py's current_user()) — NOT here. Refreshing again inside
+every API call is redundant (extra round-trip, and repeatedly refreshing
+can trigger Google's own token-rotation/rate limits), so these functions
+just use creds.token as handed to them.
 """
 
+import base64
+import mimetypes
 import requests
-from datetime import datetime
-from google_auth_oauthlib.flow import Flow
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from google.auth.exceptions import RefreshError
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
 
-import config
+GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 
-def build_flow(state=None):
-    if not config.CLIENT_CONFIG:
-        raise RuntimeError(
-            "CLIENT_SECRET_JSON environment variable is not set or "
-            "could not be parsed as JSON. Check it in Render's "
-            "Environment tab."
+def _headers(creds):
+    return {"Authorization": f"Bearer {creds.token}"}
+
+
+def get_signature(creds) -> str:
+    """Fetch the user's default Gmail signature (HTML, including any
+    embedded image) for their primary send-as address."""
+    try:
+        resp = requests.get(
+            f"{GMAIL_API_BASE}/settings/sendAs",
+            headers=_headers(creds),
+            timeout=15,
         )
-    flow = Flow.from_client_config(
-        config.CLIENT_CONFIG,
-        scopes=config.SCOPES,
-        state=state,
-    )
-    flow.redirect_uri = config.OAUTH_REDIRECT_URI
-    return flow
+        resp.raise_for_status()
+        data = resp.json()
+        for entry in data.get("sendAs", []):
+            if entry.get("isDefault"):
+                return entry.get("signature", "") or ""
+        send_as = data.get("sendAs", [])
+        if send_as:
+            return send_as[0].get("signature", "") or ""
+    except Exception:
+        pass
+    return ""
 
 
-def credentials_to_dict(creds: Credentials) -> dict:
-    return {
-        "token": creds.token,
-        "refresh_token": creds.refresh_token,
-        "token_uri": creds.token_uri,
-        "client_id": creds.client_id,
-        "client_secret": creds.client_secret,
-        "scopes": creds.scopes,
-        "expiry": creds.expiry.isoformat() if creds.expiry else None,
-    }
+def _build_mime(to, subject, html_body, cc=None, bcc=None, attachments=None,
+                 in_reply_to=None, references=None):
+    msg = MIMEMultipart("mixed")
+    msg["to"] = to
+    if cc:
+        msg["cc"] = cc
+    if bcc:
+        msg["bcc"] = bcc
+    msg["subject"] = subject
+    if in_reply_to:
+        msg["In-Reply-To"] = in_reply_to
+    if references:
+        msg["References"] = references
+
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(html_body, "html"))
+    msg.attach(alt)
+
+    for att in attachments or []:
+        ctype, encoding = mimetypes.guess_type(att["filename"])
+        if ctype is None:
+            ctype = "application/octet-stream"
+        maintype, subtype = ctype.split("/", 1)
+        part = MIMEBase(maintype, subtype)
+        if "path" in att:
+            with open(att["path"], "rb") as f:
+                part.set_payload(f.read())
+        else:
+            part.set_payload(att["data"])
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", "attachment",
+                         filename=att["filename"])
+        msg.attach(part)
+
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    return {"raw": raw}
 
 
-def credentials_from_dict(data: dict):
-    if not data or not data.get("refresh_token"):
-        return None
-
-    creds = Credentials(
-        token=data.get("token"),
-        refresh_token=data.get("refresh_token"),
-        token_uri=data.get("token_uri"),
-        client_id=data.get("client_id"),
-        client_secret=data.get("client_secret"),
-        scopes=data.get("scopes"),
-    )
-
-    expiry_str = data.get("expiry")
-    if expiry_str:
-        creds.expiry = datetime.fromisoformat(expiry_str)
-
-    if creds.expired and creds.refresh_token:
-        try:
-            creds.refresh(Request())
-        except RefreshError:
-            # Refresh token itself is dead (revoked, expired, or the
-            # OAuth client changed). Treat this as "not logged in"
-            # rather than crashing — current_user() will clear the
-            # session and send the person back to /login.
-            return None
-
-    return creds
-
-
-def get_user_email(creds: Credentials) -> str:
-    resp = requests.get(
-        "https://www.googleapis.com/oauth2/v2/userinfo",
-        headers={"Authorization": f"Bearer {creds.token}"},
-        timeout=10,
+def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
+                           attachments=None):
+    body = _build_mime(to, subject, html_body, cc=cc, bcc=bcc,
+                        attachments=attachments)
+    resp = requests.post(
+        f"{GMAIL_API_BASE}/messages/send",
+        headers=_headers(creds),
+        json=body,
+        timeout=30,
     )
     resp.raise_for_status()
-    return resp.json()["email"]
+    sent = resp.json()
+    return {"thread_id": sent.get("threadId"), "message_id": sent["id"]}
 
 
-def is_acceptor(email: str) -> bool:
-    return config.is_acceptor_email(email)
+def send_threaded_reply(creds, to, subject, html_body, rfc_message_id,
+                         cc=None, bcc=None, attachments=None):
+    """No `threadId` parameter — Gmail's threadId is scoped to a single
+    mailbox, so reusing it from a different account 404s. Threading in
+    the requestor's inbox comes from In-Reply-To/References matching the
+    original message's RFC822 Message-ID, which is standard and works
+    across any mail client regardless of which account is replying."""
+    if not subject.lower().startswith("re:"):
+        subject = f"Re: {subject}"
+    body = _build_mime(
+        to, subject, html_body, cc=cc, bcc=bcc, attachments=attachments,
+        in_reply_to=rfc_message_id, references=rfc_message_id,
+    )
+    resp = requests.post(
+        f"{GMAIL_API_BASE}/messages/send",
+        headers=_headers(creds),
+        json=body,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_rfc_message_id(creds, gmail_message_id: str) -> str:
+    resp = requests.get(
+        f"{GMAIL_API_BASE}/messages/{gmail_message_id}",
+        params={"format": "metadata", "metadataHeaders": "Message-ID"},
+        headers=_headers(creds),
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    for h in data.get("payload", {}).get("headers", []):
+        if h["name"].lower() == "message-id":
+            return h["value"]
+    return ""
