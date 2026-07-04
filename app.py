@@ -51,16 +51,22 @@ def inject_role():
 
 
 def current_user():
-    data = session.get("credentials")
-    if not data:
+
+    email = session.get("email")
+
+    if not email:
         return None, None
-    creds = auth.credentials_from_dict(data)
-    if not creds:
+
+    creds = auth.credentials_from_dict(session.get("credentials"))
+
+    if creds is None:
         session.clear()
         return None, None
-    # refresh may have rotated the access token — persist it back
+
+    # Save refreshed credentials back into the session
     session["credentials"] = auth.credentials_to_dict(creds)
-    return session.get("email"), creds
+
+    return email, creds
 
 
 def login_required(func):
