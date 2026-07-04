@@ -53,6 +53,9 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+
 def credentials_from_dict(data):
 
     if not data:
@@ -67,9 +70,20 @@ def credentials_from_dict(data):
         scopes=data.get("scopes"),
     )
 
-    if creds.expired and creds.refresh_token:
+    try:
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
 
-        creds.refresh(Request())
+            print("=" * 80)
+            print("TOKEN REFRESH SUCCESS")
+            print("NEW TOKEN:", creds.token[:30], "...")
+            print("=" * 80)
+
+    except Exception as e:
+        print("=" * 80)
+        print("TOKEN REFRESH FAILED")
+        print(e)
+        print("=" * 80)
 
     return creds
 
