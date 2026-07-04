@@ -13,11 +13,13 @@
     <p><b>Attachments:</b> {{ ticket['Attachment'] or 'None' }}</p>
     <hr>
     <b>Description:</b>
-    <div class="border rounded p-3 bg-light">{{ ticket['Requestor Description'] | safe }}</div>
+    <!-- Stored as plain text in the Sheet now (see sheets_utils.html_to_plain_text),
+         so this is rendered as text with preserved line breaks, not HTML. -->
+    <div class="border rounded p-3 bg-light" style="white-space:pre-wrap">{{ ticket['Requestor Description'] }}</div>
     {% if ticket['Acceptor Description'] %}
     <hr>
     <b>Acceptor Notes:</b>
-    <div class="border rounded p-3 bg-light">{{ ticket['Acceptor Description'] | safe }}</div>
+    <div class="border rounded p-3 bg-light" style="white-space:pre-wrap">{{ ticket['Acceptor Description'] }}</div>
     {% endif %}
   </div>
 </div>
@@ -57,28 +59,12 @@
     <input type="file" name="attachments" class="form-control" multiple>
   </div>
 
-  <div class="mb-3">
-    <label class="form-label">
-        Attachments
-        <span class="text-muted">(optional)</span>
-    </label>
-
-    <input
-        type="file"
-        name="attachments"
-        class="form-control"
-        multiple>
-  </div>
-
   <button type="submit" class="btn btn-primary">Save &amp; Notify Requestor</button>
 </form>
 
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script>
-  // Same Gmail-style formatting toolbar as the New Ticket description box:
-  // bold/italic/underline/strike, headers, lists, indent, links, images,
-  // color, alignment, blockquote/code, clear formatting.
   const noteQuill = new Quill('#noteEditor', {
     theme: 'snow',
     placeholder: 'Add an update for the requestor (optional)...',
