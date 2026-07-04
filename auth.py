@@ -31,7 +31,14 @@ def build_flow(state=None):
     return flow
 
 
-def credentials_to_dict(creds: Credentials) -> dict:
+def credentials_to_dict(creds):
+    print("=" * 80)
+    print("TOKEN DEBUG")
+    print("Access Token :", bool(creds.token))
+    print("Refresh Token:", bool(creds.refresh_token))
+    print("Scopes       :", creds.scopes)
+    print("=" * 80)
+
     return {
         "token": creds.token,
         "refresh_token": creds.refresh_token,
