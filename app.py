@@ -154,6 +154,7 @@ def oauth2callback():
     session.permanent = True
 
     session["credentials"] = auth.credentials_to_dict(creds)
+    print(session["credentials"])
     session["email"] = email
 
     if auth.is_acceptor(email):
