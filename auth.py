@@ -42,8 +42,13 @@ def credentials_to_dict(creds: Credentials) -> dict:
     }
 
 
-def credentials_from_dict(data: dict):
-    if not data or not data.get("refresh_token"):
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+
+
+def credentials_from_dict(data):
+
+    if not data:
         return None
 
     creds = Credentials(
@@ -54,8 +59,11 @@ def credentials_from_dict(data: dict):
         client_secret=data.get("client_secret"),
         scopes=data.get("scopes"),
     )
+
     if creds.expired and creds.refresh_token:
+
         creds.refresh(Request())
+
     return creds
 
 
