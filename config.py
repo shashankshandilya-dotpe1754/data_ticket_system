@@ -20,10 +20,6 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 # GOOGLE OAUTH
 # ==========================================================
 
-# Store the ENTIRE client_secret.json contents in Render
-# Environment Variable named:
-# CLIENT_SECRET_JSON
-
 CLIENT_SECRET_JSON = os.environ.get("CLIENT_SECRET_JSON")
 
 if CLIENT_SECRET_JSON:
@@ -39,10 +35,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/userinfo.email",
     "openid",
 ]
-
-# Local default
-# On Render this must be overridden by Environment Variable:
-# OAUTH_REDIRECT_URI=https://data-ticket-system.onrender.com/oauth2callback
 
 OAUTH_REDIRECT_URI = os.environ.get(
     "OAUTH_REDIRECT_URI",
@@ -163,9 +155,6 @@ SECRET_KEY = os.environ.get(
     "change-this-to-a-random-secret"
 )
 
-# Keep the login session alive until the user explicitly logs out,
-# instead of expiring the moment the browser is closed (Flask's default
-# is a non-permanent, browser-session-only cookie).
 PERMANENT_SESSION_LIFETIME = timedelta(days=30)
 
 UPLOAD_FOLDER = os.path.join(
