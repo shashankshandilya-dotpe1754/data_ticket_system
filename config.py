@@ -69,9 +69,16 @@ COLUMNS = [
     "High Priority Reason",
     "Status",
     "Assigned To",
-    "Attachment",
+    "Attachments",
     "Updated Date",
     "Closed Date",
+
+    "Parent Ticket ID",
+    "Previous Ticket ID",
+    "Transfer By",
+    "Transfer Date",
+    "Transfer Reason",
+
     "Acceptor Description",
     "Thread Id",
     "RFC Message Id",
