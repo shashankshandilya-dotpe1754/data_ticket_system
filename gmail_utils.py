@@ -98,8 +98,17 @@ def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
     return {"thread_id": sent.get("threadId"), "message_id": sent["id"]}
 
 
-def send_threaded_reply(creds, to, subject, html_body, rfc_message_id,
-                         cc=None, bcc=None, attachments=None):
+def send_threaded_reply(
+    creds,
+    thread_id,
+    rfc_message_id,
+    to,
+    subject,
+    html_body,
+    cc=None,
+    bcc=None,
+    attachments=None,
+):
     """No `threadId` parameter — Gmail's threadId is scoped to a single
     mailbox, so reusing it from a different account 404s. Threading in
     the requestor's inbox comes from In-Reply-To/References matching the
