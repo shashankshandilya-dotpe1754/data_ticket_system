@@ -1,26 +1,36 @@
 """
-Google Sheets operations using plain `requests` calls to the Sheets REST
-API, instead of google-api-python-client (see gmail_utils.py for why —
-same memory rationale applies here).
+Google Sheets operations using plain requests.
+Memory optimized version with debugging.
 """
 
 import datetime
 from urllib.parse import quote
+from html.parser import HTMLParser
+import html as html_module
+
 import requests
+from google.auth.transport.requests import Request
 
 import config
+
 
 SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 
 
-from google.auth.transport.requests import Request
+# ==========================================================
+# AUTH HEADER
+# ==========================================================
 
 def _headers(creds):
 
     try:
-        creds.refresh(Request())
-    except Exception:
-        pass
+        if creds.expired or not creds.valid:
+            creds.refresh(Request())
+    except Exception as e:
+        print("=" * 80)
+        print("TOKEN REFRESH FAILED")
+        print(e)
+        print("=" * 80)
 
     return {
         "Authorization": f"Bearer {creds.token}",
@@ -28,64 +38,144 @@ def _headers(creds):
     }
 
 
-def _values_url(range_str: str, suffix: str = "") -> str:
+# ==========================================================
+# URL
+# ==========================================================
+
+def _values_url(range_str, suffix=""):
+
     return (
-        f"{SHEETS_API_BASE}/{config.SPREADSHEET_ID}/values/"
-        f"{quote(range_str, safe='')}{suffix}"
+        f"{SHEETS_API_BASE}/"
+        f"{config.SPREADSHEET_ID}"
+        f"/values/"
+        f"{quote(range_str, safe='')}"
+        f"{suffix}"
     )
 
 
-def _row_from_ticket(t: dict) -> list:
-    return [t.get(col, "") for col in config.COLUMNS]
+# ==========================================================
+# ROW <-> DICT
+# ==========================================================
+
+def _row_from_ticket(ticket):
+
+    return [
+        ticket.get(col, "")
+        for col in config.COLUMNS
+    ]
 
 
-def _ticket_from_row(row: list) -> dict:
+def _ticket_from_row(row):
+
     row = row + [""] * (len(config.COLUMNS) - len(row))
-    return dict(zip(config.COLUMNS, row))
+
+    return dict(
+        zip(
+            config.COLUMNS,
+            row
+        )
+    )
 
 
-def get_all_tickets(creds) -> list[dict]:
+# ==========================================================
+# GET ALL TICKETS
+# ==========================================================
+
+def get_all_tickets(creds):
+
     resp = requests.get(
         _values_url(config.SHEET_RANGE),
         headers=_headers(creds),
         timeout=20,
     )
+
+    print("=" * 80)
+    print("GOOGLE SHEETS DEBUG")
+    print("URL :", resp.url)
+    print("STATUS :", resp.status_code)
+    print(resp.text)
+    print("=" * 80)
+
     resp.raise_for_status()
+
     values = resp.json().get("values", [])
+
     if not values:
         return []
-    rows = values[1:]  # skip header
+
     tickets = []
-    for i, row in enumerate(rows, start=2):
-        if not row or not row[0]:
+
+    for i, row in enumerate(values[1:], start=2):
+
+        if not row:
             continue
-        t = _ticket_from_row(row)
-        t["_row"] = i
-        tickets.append(t)
+
+        if len(row) == 0:
+            continue
+
+        if row[0] == "":
+            continue
+
+        ticket = _ticket_from_row(row)
+
+        ticket["_row"] = i
+
+        tickets.append(ticket)
+
     return tickets
 
 
-def get_ticket(creds, ticket_id: str) -> dict | None:
-    for t in get_all_tickets(creds):
-        if t.get("Ticket ID") == ticket_id:
-            return t
+# ==========================================================
+# GET ONE TICKET
+# ==========================================================
+
+def get_ticket(creds, ticket_id):
+
+    tickets = get_all_tickets(creds)
+
+    for ticket in tickets:
+
+        if ticket["Ticket ID"] == ticket_id:
+            return ticket
+
     return None
 
 
-def next_ticket_id(creds) -> str:
+# ==========================================================
+# NEXT TICKET ID
+# ==========================================================
+
+def next_ticket_id(creds):
+
     tickets = get_all_tickets(creds)
-    year = datetime.datetime.now(config.IST).year
-    n = len(tickets) + 1
-    candidate = f"TCK-{year}-{n:04d}"
-    existing_ids = {t["Ticket ID"] for t in tickets}
-    while candidate in existing_ids:
-        n += 1
-        candidate = f"TCK-{year}-{n:04d}"
-    return candidate
+
+    year = datetime.datetime.now().year
+
+    number = len(tickets) + 1
+
+    existing = {
+        x["Ticket ID"]
+        for x in tickets
+    }
+
+    while True:
+
+        ticket_id = f"TCK-{year}-{number:04d}"
+
+        if ticket_id not in existing:
+            return ticket_id
+
+        number += 1
 
 
-def append_ticket(creds, ticket: dict):
+# ==========================================================
+# APPEND
+# ==========================================================
+
+def append_ticket(creds, ticket):
+
     row = _row_from_ticket(ticket)
+
     resp = requests.post(
         _values_url(config.SHEET_RANGE, ":append"),
         headers=_headers(creds),
@@ -93,67 +183,98 @@ def append_ticket(creds, ticket: dict):
             "valueInputOption": "USER_ENTERED",
             "insertDataOption": "INSERT_ROWS",
         },
-        json={"values": [row]},
+        json={
+            "values": [row]
+        },
         timeout=20,
     )
+
+    print(resp.text)
+
     resp.raise_for_status()
 
 
-def update_ticket_fields(creds, ticket_id: str, updates: dict, ticket: dict = None):
+# ==========================================================
+# UPDATE
+# ==========================================================
+
+def update_ticket_fields(
+    creds,
+    ticket_id,
+    updates,
+    ticket=None,
+):
+
     if ticket is None:
-        ticket = get_ticket(creds, ticket_id)
-        if not ticket:
-            raise ValueError(f"Ticket {ticket_id} not found in sheet")
 
-    row_num = ticket["_row"]
+        ticket = get_ticket(
+            creds,
+            ticket_id,
+        )
 
-    for col_name, value in updates.items():
-        col_index = config.COLUMNS.index(col_name)
-        col_letter = chr(ord("A") + col_index)
-        rng = f"{config.SHEET_NAME}!{col_letter}{row_num}"
+    if ticket is None:
+
+        raise ValueError(
+            f"{ticket_id} not found"
+        )
+
+    row = ticket["_row"]
+
+    for column, value in updates.items():
+
+        index = config.COLUMNS.index(column)
+
+        letter = chr(ord("A") + index)
+
+        rng = f"{config.SHEET_NAME}!{letter}{row}"
+
         resp = requests.put(
             _values_url(rng),
             headers=_headers(creds),
-            params={"valueInputOption": "USER_ENTERED"},
-            json={"values": [[value]]},
+            params={
+                "valueInputOption": "USER_ENTERED"
+            },
+            json={
+                "values": [[value]]
+            },
             timeout=20,
         )
+
+        print(resp.text)
+
         resp.raise_for_status()
 
     ticket.update(updates)
+
     return ticket
 
 
-def html_to_plain_text(html_str: str) -> str:
-    """Strips HTML (from the Quill editors) down to readable plain text
-    for storage in the Sheet, while the raw HTML is still used for the
-    actual emails. Stdlib-only (no BeautifulSoup) to keep memory low."""
-    if not html_str:
+# ==========================================================
+# HTML -> TEXT
+# ==========================================================
+
+class StripHTML(HTMLParser):
+
+    def __init__(self):
+
+        super().__init__()
+
+        self.text = []
+
+    def handle_data(self, data):
+
+        self.text.append(data)
+
+
+def html_to_plain_text(html):
+
+    if not html:
         return ""
-    from html.parser import HTMLParser
-    import html as html_module
 
-    BLOCK_TAGS = {"p", "div", "br", "li", "h1", "h2", "h3",
-                  "h4", "h5", "h6", "blockquote"}
+    parser = StripHTML()
 
-    class _Stripper(HTMLParser):
-        def __init__(self):
-            super().__init__()
-            self.parts = []
+    parser.feed(html)
 
-        def handle_starttag(self, tag, attrs):
-            if tag in BLOCK_TAGS:
-                self.parts.append("\n")
+    text = "".join(parser.text)
 
-        def handle_endtag(self, tag):
-            if tag in BLOCK_TAGS:
-                self.parts.append("\n")
-
-        def handle_data(self, data):
-            self.parts.append(data)
-
-    parser = _Stripper()
-    parser.feed(html_str)
-    text = html_module.unescape("".join(parser.parts))
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    return "\n".join(lines).strip()
+    return html_module.unescape(text).strip()
