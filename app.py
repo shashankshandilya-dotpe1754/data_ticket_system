@@ -133,6 +133,16 @@ def oauth2callback():
     flow = auth.build_flow(state=state)
     flow.fetch_token(authorization_response=request.url)
     creds = flow.credentials
+    print("=" * 80)
+    print("TOKEN")
+    print(creds.token)
+    print("=" * 80)
+    print("REFRESH TOKEN")
+    print(creds.refresh_token)
+    print("=" * 80)
+    print("SCOPES")
+    print(creds.scopes)
+    print("=" * 80)
     email = auth.get_user_email(creds)
 
     session.permanent = True
