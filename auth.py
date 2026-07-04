@@ -1,16 +1,24 @@
 """
 Handles "Login with Gmail" for both requestors and acceptors, on Render.
 
-Credentials are stored as a plain dict in the Flask session (signed
-cookie). The dict MUST contain every field google-auth needs to refresh
-an expired access token on its own:
-    token, refresh_token, token_uri, client_id, client_secret, scopes
+Two real bugs fixed here:
+1. `expiry` was never stored/restored, so Credentials.expired always
+   evaluated False (google-auth's default when no expiry is set) — a
+   stale ~1hr-old access token would never get refreshed.
+2. If Google has actually revoked/expired the refresh token itself
+   (invalid_grant — commonly happens when the OAuth consent screen is
+   still in "Testing" mode, which caps refresh tokens at 7 days), the
+   old code let that exception bubble up as an unhandled 500. Now it's
+   caught and treated as "not logged in", so the person is sent back to
+   /login instead of seeing a crash.
 """
 
 import requests
+from datetime import datetime
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.auth.exceptions import RefreshError
 
 import config
 
@@ -31,14 +39,7 @@ def build_flow(state=None):
     return flow
 
 
-def credentials_to_dict(creds):
-    print("=" * 80)
-    print("TOKEN DEBUG")
-    print("Access Token :", bool(creds.token))
-    print("Refresh Token:", bool(creds.refresh_token))
-    print("Scopes       :", creds.scopes)
-    print("=" * 80)
-
+def credentials_to_dict(creds: Credentials) -> dict:
     return {
         "token": creds.token,
         "refresh_token": creds.refresh_token,
@@ -46,19 +47,12 @@ def credentials_to_dict(creds):
         "client_id": creds.client_id,
         "client_secret": creds.client_secret,
         "scopes": creds.scopes,
+        "expiry": creds.expiry.isoformat() if creds.expiry else None,
     }
 
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-
-
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-
-def credentials_from_dict(data):
-
-    if not data:
+def credentials_from_dict(data: dict):
+    if not data or not data.get("refresh_token"):
         return None
 
     creds = Credentials(
@@ -70,20 +64,19 @@ def credentials_from_dict(data):
         scopes=data.get("scopes"),
     )
 
-    try:
-        if creds.expired and creds.refresh_token:
+    expiry_str = data.get("expiry")
+    if expiry_str:
+        creds.expiry = datetime.fromisoformat(expiry_str)
+
+    if creds.expired and creds.refresh_token:
+        try:
             creds.refresh(Request())
-
-            print("=" * 80)
-            print("TOKEN REFRESH SUCCESS")
-            print("NEW TOKEN:", creds.token[:30], "...")
-            print("=" * 80)
-
-    except Exception as e:
-        print("=" * 80)
-        print("TOKEN REFRESH FAILED")
-        print(e)
-        print("=" * 80)
+        except RefreshError:
+            # Refresh token itself is dead (revoked, expired, or the
+            # OAuth client changed). Treat this as "not logged in"
+            # rather than crashing — current_user() will clear the
+            # session and send the person back to /login.
+            return None
 
     return creds
 
