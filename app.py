@@ -620,18 +620,16 @@ def update_ticket(ticket_id):
 
     rfc_message_id = ticket.get("RFC Message Id")
 
-    thread_id = ticket.get("Thread Id")
-    
-    gmail_utils.send_threaded_reply(
-        creds=creds,
-        thread_id=thread_id,
-        rfc_message_id=rfc_message_id,
-        to=ticket["Requestor Email"],
-        subject=f"[{ticket_id}] {ticket['Subject']}",
-        html_body=body,
-        cc=",".join(default_cc) if default_cc else None,
-        attachments=attachments,
-    )
+    if rfc_message_id:
+        gmail_utils.send_threaded_reply(
+            creds,
+            to=ticket["Requestor Email"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            rfc_message_id=rfc_message_id,
+            cc=",".join(default_cc) if default_cc else None,
+            attachments=attachments,
+        )
     else:
         # No RFC message id on record (e.g. a ticket created before this
         # column existed) — send as a fresh email instead of failing.
