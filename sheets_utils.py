@@ -84,9 +84,12 @@ def _ticket_from_row(row):
 
 def get_all_tickets(creds):
 
+    headers = _headers(creds)
+    print(headers)
+    
     resp = requests.get(
         _values_url(config.SHEET_RANGE),
-        headers=_headers(creds),
+        headers=headers,
         timeout=20,
     )
 
