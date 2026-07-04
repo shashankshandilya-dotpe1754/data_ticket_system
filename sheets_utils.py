@@ -24,13 +24,17 @@ SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 def _headers(creds):
 
     try:
-        if creds.expired or not creds.valid:
+        if creds.refresh_token:
             creds.refresh(Request())
     except Exception as e:
         print("=" * 80)
         print("TOKEN REFRESH FAILED")
         print(e)
         print("=" * 80)
+
+    print("=" * 80)
+    print("USING TOKEN:", creds.token[:40], "...")
+    print("=" * 80)
 
     return {
         "Authorization": f"Bearer {creds.token}",
