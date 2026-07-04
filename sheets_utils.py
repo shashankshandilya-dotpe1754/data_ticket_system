@@ -86,6 +86,16 @@ def get_all_tickets(creds):
 
     headers = _headers(creds)
     print(headers)
+
+    userinfo = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers=headers,
+    )
+    
+    print("=" * 80)
+    print("USERINFO STATUS:", userinfo.status_code)
+    print(userinfo.text)
+    print("=" * 80)
     
     resp = requests.get(
         _values_url(config.SHEET_RANGE),
