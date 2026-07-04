@@ -139,6 +139,12 @@ def oauth2callback():
     flow = auth.build_flow(state=state)
     flow.fetch_token(authorization_response=request.url)
     creds = flow.credentials
+    print("=" * 80)
+    print("FLOW CLIENT ID")
+    print(creds.client_id)
+    print("FLOW TOKEN")
+    print(creds.token)
+    print("=" * 80)
     print("Refresh Token:", creds.refresh_token)
     print("=" * 80)
     print("TOKEN")
