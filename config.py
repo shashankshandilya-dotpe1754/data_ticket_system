@@ -5,7 +5,8 @@ Central configuration for the Data Team Ticket System.
 import os
 import json
 from datetime import timedelta
-
+from zoneinfo import ZoneInfo
+IST = ZoneInfo("Asia/Kolkata")
 # ==========================================================
 # BASE DIRECTORY
 # ==========================================================
