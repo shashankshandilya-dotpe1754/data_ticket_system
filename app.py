@@ -155,6 +155,43 @@ def oauth2callback():
         return redirect(url_for("dashboard"))
     return redirect(url_for("my_tickets"))
 
+
+# ==========================================================
+# Transfer Ticket
+# ==========================================================
+@app.route("/transfer_ticket/<ticket_id>", methods=["POST"])
+@acceptor_required
+def transfer_ticket(ticket_id):
+
+    email, creds = current_user()
+
+    new_assignee = request.form.get("transfer_to", "").strip()
+    transfer_reason = request.form.get("transfer_reason", "").strip()
+
+    if not new_assignee:
+        flash("Please select an acceptor.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+    if new_assignee == email:
+        flash("Ticket is already assigned to you.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+    success, message = sheets_utils.transfer_ticket(
+        creds=creds,
+        ticket_id=ticket_id,
+        new_assignee=new_assignee,
+        transfer_by=email,
+        transfer_reason=transfer_reason,
+    )
+
+    flash(message, "success" if success else "danger")
+
+    if success:
+        return redirect(url_for("ticket_detail", ticket_id=message))
+
+    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+
 # ==========================================================
 # Logout
 # ==========================================================
