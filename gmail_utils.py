@@ -27,8 +27,16 @@ from email import encoders
 GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 
+from google.auth.transport.requests import Request
+
 def _headers(creds):
-    return {"Authorization": f"Bearer {creds.token}"}
+
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+    return {
+        "Authorization": f"Bearer {creds.token}"
+    }
 
 
 def get_signature(creds) -> str:
