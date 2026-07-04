@@ -23,24 +23,14 @@ SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 
 def _headers(creds):
 
-    if creds.expired:
-        creds.refresh(Request())
+    try:
+        if creds.expired:
+            creds.refresh(Request())
     except Exception as e:
         print("REFRESH ERROR:", e)
 
     print("=" * 80)
     print("TOKEN:", creds.token[:40])
-    print("=" * 80)
-
-    # Test the token against Google's tokeninfo endpoint
-    r = requests.get(
-        "https://oauth2.googleapis.com/tokeninfo",
-        params={"access_token": creds.token},
-        timeout=10,
-    )
-
-    print("TOKENINFO STATUS:", r.status_code)
-    print(r.text)
     print("=" * 80)
 
     return {
