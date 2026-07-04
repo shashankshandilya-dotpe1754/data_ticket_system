@@ -278,3 +278,22 @@ def html_to_plain_text(html):
     text = "".join(parser.text)
 
     return html_module.unescape(text).strip()
+
+
+# ==========================================================
+# Transfer
+# ==========================================================
+def transfer_ticket(
+    creds,
+    ticket_id,
+    new_assignee,
+    transfer_by,
+    transfer_reason,
+):
+    """
+    Creates a new transferred ticket.
+
+    Phase 1 implementation.
+    """
+
+    return False, "Transfer logic not implemented yet."
