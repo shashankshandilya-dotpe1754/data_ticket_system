@@ -14,9 +14,27 @@
       {% if session.get('email') %}
         <span class="navbar-text text-white me-3">{{ session['email'] }}</span>
         {% if is_current_user_acceptor %}
-        <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('availability') }}">Availability</a>
-        {% endif %}
-        <a class="btn btn-outline-light btn-sm" href="{{ url_for('logout') }}">Logout</a>
+      <a class="btn btn-outline-light btn-sm me-2"
+   href="{{ url_for('dashboard') }}">
+Dashboard
+</a>
+
+<a class="btn btn-outline-light btn-sm me-2"
+   href="{{ url_for('request_ticket') }}">
+My Ticket
+</a>
+
+<a class="btn btn-outline-light btn-sm me-2"
+   href="{{ url_for('availability') }}">
+Availability
+</a>
+
+{% endif %}
+
+<a class="btn btn-outline-light btn-sm"
+   href="{{ url_for('logout') }}">
+Logout
+</a>
       {% endif %}
     </div>
   </div>
