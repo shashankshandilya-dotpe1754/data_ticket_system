@@ -62,8 +62,36 @@
       <td>{{ t['Ticket ID'] }}</td>
       <td>{{ t['Requestor Email'] }}</td>
       <td>{{ t['Subject'] }}</td>
-      <td><span class="badge bg-{{ 'danger' if t['Priority']=='High' else ('warning' if t['Priority']=='Medium' else 'secondary') }}">{{ t['Priority'] }}</span></td>
-      <td><span class="badge bg-info text-dark">{{ t['Status'] }}</span></td>
+      <td>
+        {% if t['Priority']=="High" %}
+        <span class="badge bg-danger">High</span>
+        {% elif t['Priority']=="Medium" %}
+        <span class="badge bg-warning text-dark">Medium</span>
+        {% elif t['Priority']=="Low" %}
+        <span class="badge bg-success">Low</span>
+        {% else %}
+        <span class="badge bg-secondary">
+          {{ t['Priority'] }}
+        </span>
+        {% endif %}
+      </td>
+      <td>
+        {% if t['Status']=="Open" %}
+        <span class="badge bg-info text-dark">Open</span>
+        {% elif t['Status']=="In Progress" %}
+        <span class="badge bg-primary">In Progress</span>
+        {% elif t['Status']=="On Hold" %}
+        <span class="badge bg-warning text-dark">On Hold</span>
+        {% elif t['Status']=="Resolved" %}
+        <span class="badge bg-success">Resolved</span>
+        {% elif t['Status']=="Closed" %}
+        <span class="badge bg-dark">Closed</span>
+        {% else %}
+        <span class="badge bg-secondary">
+          {{ t['Status'] }}
+        </span>
+        {% endif %}
+      </td>
       <td>{{ t['Assigned To'] or '—' }}</td>
       <td>{{ t['Created Date'] }}</td>
       <td>{{ t['Updated Date'] }}</td>
