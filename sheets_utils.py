@@ -23,7 +23,7 @@ SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 
 def _headers(creds):
 
-    try:
+    if creds.expired:
         creds.refresh(Request())
     except Exception as e:
         print("REFRESH ERROR:", e)
