@@ -421,6 +421,7 @@ def ticket_detail(ticket_id):
     return render_template(
         "ticket_detail.html",
         ticket=ticket,
+        acceptors=config.ACCEPTORS,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
         acceptors=team_status.get_assignable_acceptors(),
