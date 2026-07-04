@@ -1,19 +1,11 @@
 """
-Gmail operations using plain `requests` calls to the Gmail REST API,
-instead of google-api-python-client.
+Gmail operations using plain `requests` calls to the Gmail REST API.
 
-WHY THIS REWRITE:
-1. CRASH FIX: the old code passed `threadId` when sending a reply from a
-   DIFFERENT Gmail account than the one that created the thread. Gmail's
-   threadId is scoped to a single mailbox — reusing it from another
-   account returns 404 "Requested entity was not found." Threading in
-   the requestor's inbox is actually accomplished by the standard RFC822
-   In-Reply-To / References headers (which we already set correctly),
-   NOT by the threadId API parameter. So threadId is simply dropped here.
-2. MEMORY FIX: google-api-python-client pulls in protobuf, google-api-core,
-   and googleapis-common-protos — a heavy dependency chain for what is,
-   in practice, four simple HTTP calls. Plain `requests` (already a
-   dependency for OAuth) does the same job with a far smaller footprint.
+Token refresh happens ONCE per request, in auth.credentials_from_dict()
+(called from app.py's current_user()) — NOT here. Refreshing again inside
+every API call is redundant (extra round-trip, and repeatedly refreshing
+can trigger Google's own token-rotation/rate limits), so these functions
+just use creds.token as handed to them.
 """
 
 import base64
@@ -27,16 +19,8 @@ from email import encoders
 GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 
-from google.auth.transport.requests import Request
-
 def _headers(creds):
-
-    if creds.expired and creds.refresh_token:
-        creds.refresh(Request())
-
-    return {
-        "Authorization": f"Bearer {creds.token}"
-    }
+    return {"Authorization": f"Bearer {creds.token}"}
 
 
 def get_signature(creds) -> str:
@@ -116,9 +100,11 @@ def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
 
 def send_threaded_reply(creds, to, subject, html_body, rfc_message_id,
                          cc=None, bcc=None, attachments=None):
-    """No `threadId` parameter — see module docstring. Threading in the
-    requestor's inbox comes from In-Reply-To/References matching the
-    original message's RFC822 Message-ID."""
+    """No `threadId` parameter — Gmail's threadId is scoped to a single
+    mailbox, so reusing it from a different account 404s. Threading in
+    the requestor's inbox comes from In-Reply-To/References matching the
+    original message's RFC822 Message-ID, which is standard and works
+    across any mail client regardless of which account is replying."""
     if not subject.lower().startswith("re:"):
         subject = f"Re: {subject}"
     body = _build_mime(
