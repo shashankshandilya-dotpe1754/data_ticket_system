@@ -13,8 +13,16 @@ import config
 SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 
 
+from google.auth.transport.requests import Request
+
 def _headers(creds):
-    return {"Authorization": f"Bearer {creds.token}"}
+
+    if creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+    return {
+        "Authorization": f"Bearer {creds.token}"
+    }
 
 
 def _values_url(range_str: str, suffix: str = "") -> str:
