@@ -117,7 +117,7 @@ def login():
     flow = auth.build_flow()
     auth_url, state = flow.authorization_url(
         access_type="offline",
-        include_granted_scopes="true",
+        include_granted_scopes="false",
         prompt="consent",   # forces Google to re-issue a refresh_token every time
     )
     session["oauth_state"] = state
