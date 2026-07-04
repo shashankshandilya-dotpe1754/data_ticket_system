@@ -1,4 +1,19 @@
-body { background: #f4f6fb; }
-.navbar-brand { font-weight: 600; }
-.card { border: none; }
-.table td, .table th { vertical-align: middle; }
+body{
+    background:#f4f6fb;
+}
+
+.navbar-brand{
+    font-weight:700;
+}
+
+.table td,
+.table th{
+    vertical-align:middle;
+}
+
+.badge{
+    font-size:13px;
+    padding:7px 12px;
+    border-radius:15px;
+    font-weight:600;
+}
