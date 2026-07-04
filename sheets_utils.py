@@ -17,11 +17,14 @@ from google.auth.transport.requests import Request
 
 def _headers(creds):
 
-    if creds.expired and creds.refresh_token:
+    try:
         creds.refresh(Request())
+    except Exception:
+        pass
 
     return {
-        "Authorization": f"Bearer {creds.token}"
+        "Authorization": f"Bearer {creds.token}",
+        "Accept": "application/json",
     }
 
 
