@@ -138,8 +138,8 @@ def oauth2callback():
     state = session.get("oauth_state")
     flow = auth.build_flow(state=state)
     flow.fetch_token(authorization_response=request.url)
-    print(creds.refresh_token)
     creds = flow.credentials
+    print("Refresh Token:", creds.refresh_token)
     print("=" * 80)
     print("TOKEN")
     print(creds.token)
