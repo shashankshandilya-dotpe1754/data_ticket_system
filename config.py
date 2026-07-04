@@ -25,7 +25,14 @@ CLIENT_SECRET_JSON = os.environ.get("CLIENT_SECRET_JSON")
 if CLIENT_SECRET_JSON:
     CLIENT_CONFIG = json.loads(CLIENT_SECRET_JSON)
 else:
-    CLIENT_CONFIG = None
+    # Local development fallback: read the file directly if the env
+    # var isn't set (e.g. running on your own machine, not on Render).
+    local_secret_path = os.path.join(BASE_DIR, "client_secret.json")
+    if os.path.exists(local_secret_path):
+        with open(local_secret_path) as f:
+            CLIENT_CONFIG = json.load(f)
+    else:
+        CLIENT_CONFIG = None
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.send",
