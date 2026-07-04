@@ -1,136 +1,180 @@
 """
-Gmail operations using plain `requests` calls to the Gmail REST API.
-
-Token refresh happens ONCE per request, in auth.credentials_from_dict()
-(called from app.py's current_user()) — NOT here. Refreshing again inside
-every API call is redundant (extra round-trip, and repeatedly refreshing
-can trigger Google's own token-rotation/rate limits), so these functions
-just use creds.token as handed to them.
+Google Sheets operations using plain `requests` calls to the Sheets REST
+API. Token refresh happens once per request in auth.py — not here.
 """
 
-import base64
-import mimetypes
-import requests
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.base import MIMEBase
-from email import encoders
+import datetime
+from urllib.parse import quote
+from html.parser import HTMLParser
+import html as html_module
 
-GMAIL_API_BASE = "https://gmail.googleapis.com/gmail/v1/users/me"
+import requests
+
+import config
+
+SHEETS_API_BASE = "https://sheets.googleapis.com/v4/spreadsheets"
 
 
 def _headers(creds):
-    return {"Authorization": f"Bearer {creds.token}"}
+    return {
+        "Authorization": f"Bearer {creds.token}",
+        "Accept": "application/json",
+    }
 
 
-def get_signature(creds) -> str:
-    """Fetch the user's default Gmail signature (HTML, including any
-    embedded image) for their primary send-as address."""
-    try:
-        resp = requests.get(
-            f"{GMAIL_API_BASE}/settings/sendAs",
+def _values_url(range_str, suffix=""):
+    return (
+        f"{SHEETS_API_BASE}/{config.SPREADSHEET_ID}/values/"
+        f"{quote(range_str, safe='')}{suffix}"
+    )
+
+
+def _row_from_ticket(ticket: dict) -> list:
+    return [ticket.get(col, "") for col in config.COLUMNS]
+
+
+def _ticket_from_row(row: list) -> dict:
+    row = row + [""] * (len(config.COLUMNS) - len(row))
+    return dict(zip(config.COLUMNS, row))
+
+
+def get_all_tickets(creds) -> list[dict]:
+    resp = requests.get(
+        _values_url(config.SHEET_RANGE),
+        headers=_headers(creds),
+        timeout=20,
+    )
+    resp.raise_for_status()
+    values = resp.json().get("values", [])
+    if not values:
+        return []
+
+    tickets = []
+    for i, row in enumerate(values[1:], start=2):
+        if not row or row[0] == "":
+            continue
+        ticket = _ticket_from_row(row)
+        ticket["_row"] = i
+        tickets.append(ticket)
+    return tickets
+
+
+def get_ticket(creds, ticket_id: str) -> dict | None:
+    for ticket in get_all_tickets(creds):
+        if ticket["Ticket ID"] == ticket_id:
+            return ticket
+    return None
+
+
+def next_ticket_id(creds) -> str:
+    tickets = get_all_tickets(creds)
+    year = datetime.datetime.now().year
+    number = len(tickets) + 1
+    existing = {t["Ticket ID"] for t in tickets}
+    while True:
+        ticket_id = f"TCK-{year}-{number:04d}"
+        if ticket_id not in existing:
+            return ticket_id
+        number += 1
+
+
+def append_ticket(creds, ticket: dict):
+    row = _row_from_ticket(ticket)
+    resp = requests.post(
+        _values_url(config.SHEET_RANGE, ":append"),
+        headers=_headers(creds),
+        params={
+            "valueInputOption": "USER_ENTERED",
+            "insertDataOption": "INSERT_ROWS",
+        },
+        json={"values": [row]},
+        timeout=20,
+    )
+    resp.raise_for_status()
+
+
+def update_ticket_fields(creds, ticket_id: str, updates: dict, ticket: dict = None):
+    if ticket is None:
+        ticket = get_ticket(creds, ticket_id)
+        if ticket is None:
+            raise ValueError(f"{ticket_id} not found")
+
+    row = ticket["_row"]
+
+    for column, value in updates.items():
+        index = config.COLUMNS.index(column)
+        letter = chr(ord("A") + index)
+        rng = f"{config.SHEET_NAME}!{letter}{row}"
+        resp = requests.put(
+            _values_url(rng),
             headers=_headers(creds),
-            timeout=15,
+            params={"valueInputOption": "USER_ENTERED"},
+            json={"values": [[value]]},
+            timeout=20,
         )
         resp.raise_for_status()
-        data = resp.json()
-        for entry in data.get("sendAs", []):
-            if entry.get("isDefault"):
-                return entry.get("signature", "") or ""
-        send_as = data.get("sendAs", [])
-        if send_as:
-            return send_as[0].get("signature", "") or ""
-    except Exception:
-        pass
-    return ""
+
+    ticket.update(updates)
+    return ticket
 
 
-def _build_mime(to, subject, html_body, cc=None, bcc=None, attachments=None,
-                 in_reply_to=None, references=None):
-    msg = MIMEMultipart("mixed")
-    msg["to"] = to
-    if cc:
-        msg["cc"] = cc
-    if bcc:
-        msg["bcc"] = bcc
-    msg["subject"] = subject
-    if in_reply_to:
-        msg["In-Reply-To"] = in_reply_to
-    if references:
-        msg["References"] = references
+class _StripHTML(HTMLParser):
+    BLOCK_TAGS = {"p", "div", "br", "li", "h1", "h2", "h3",
+                  "h4", "h5", "h6", "blockquote"}
 
-    alt = MIMEMultipart("alternative")
-    alt.attach(MIMEText(html_body, "html"))
-    msg.attach(alt)
+    def __init__(self):
+        super().__init__()
+        self.parts = []
 
-    for att in attachments or []:
-        ctype, encoding = mimetypes.guess_type(att["filename"])
-        if ctype is None:
-            ctype = "application/octet-stream"
-        maintype, subtype = ctype.split("/", 1)
-        part = MIMEBase(maintype, subtype)
-        if "path" in att:
-            with open(att["path"], "rb") as f:
-                part.set_payload(f.read())
-        else:
-            part.set_payload(att["data"])
-        encoders.encode_base64(part)
-        part.add_header("Content-Disposition", "attachment",
-                         filename=att["filename"])
-        msg.attach(part)
+    def handle_starttag(self, tag, attrs):
+        if tag in self.BLOCK_TAGS:
+            self.parts.append("\n")
 
-    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
-    return {"raw": raw}
+    def handle_endtag(self, tag):
+        if tag in self.BLOCK_TAGS:
+            self.parts.append("\n")
+
+    def handle_data(self, data):
+        self.parts.append(data)
 
 
-def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
-                           attachments=None):
-    body = _build_mime(to, subject, html_body, cc=cc, bcc=bcc,
-                        attachments=attachments)
-    resp = requests.post(
-        f"{GMAIL_API_BASE}/messages/send",
-        headers=_headers(creds),
-        json=body,
-        timeout=30,
-    )
-    resp.raise_for_status()
-    sent = resp.json()
-    return {"thread_id": sent.get("threadId"), "message_id": sent["id"]}
+def html_to_plain_text(html_str: str) -> str:
+    if not html_str:
+        return ""
+    parser = _StripHTML()
+    parser.feed(html_str)
+    text = html_module.unescape("".join(parser.parts))
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    return "\n".join(lines).strip()
 
 
-def send_threaded_reply(creds, to, subject, html_body, rfc_message_id,
-                         cc=None, bcc=None, attachments=None):
-    """No `threadId` parameter — Gmail's threadId is scoped to a single
-    mailbox, so reusing it from a different account 404s. Threading in
-    the requestor's inbox comes from In-Reply-To/References matching the
-    original message's RFC822 Message-ID, which is standard and works
-    across any mail client regardless of which account is replying."""
-    if not subject.lower().startswith("re:"):
-        subject = f"Re: {subject}"
-    body = _build_mime(
-        to, subject, html_body, cc=cc, bcc=bcc, attachments=attachments,
-        in_reply_to=rfc_message_id, references=rfc_message_id,
-    )
-    resp = requests.post(
-        f"{GMAIL_API_BASE}/messages/send",
-        headers=_headers(creds),
-        json=body,
-        timeout=30,
-    )
-    resp.raise_for_status()
-    return resp.json()
+def transfer_ticket(creds, old_ticket: dict, new_assignee: str,
+                     transfer_by: str, transfer_reason: str, now_string: str) -> dict:
+    """Returns the newly created ticket dict. The OLD ticket row is left
+    completely untouched — it stays under its original assignee as a
+    historical record."""
 
+    new_ticket_id = next_ticket_id(creds)
 
-def get_rfc_message_id(creds, gmail_message_id: str) -> str:
-    resp = requests.get(
-        f"{GMAIL_API_BASE}/messages/{gmail_message_id}",
-        params={"format": "metadata", "metadataHeaders": "Message-ID"},
-        headers=_headers(creds),
-        timeout=15,
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    for h in data.get("payload", {}).get("headers", []):
-        if h["name"].lower() == "message-id":
-            return h["value"]
-    return ""
+    new_ticket = dict(old_ticket)
+    new_ticket.pop("_row", None)
+
+    new_ticket.update({
+        "Ticket ID": new_ticket_id,
+        "Created Date": now_string,
+        "Status": "Open",
+        "Assigned To": new_assignee,
+        "Updated Date": now_string,
+        "Closed Date": "",
+        "Parent Ticket ID": old_ticket.get("Parent Ticket ID") or old_ticket["Ticket ID"],
+        "Previous Ticket ID": old_ticket["Ticket ID"],
+        "Transfer By": transfer_by,
+        "Transfer Date": now_string,
+        "Transfer Reason": transfer_reason,
+        "Acceptor Description": "",
+        "Thread Id": "",
+        "RFC Message Id": "",
+    })
+
+    append_ticket(creds, new_ticket)
+    return new_ticket
