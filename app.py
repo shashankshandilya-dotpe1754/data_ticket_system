@@ -352,12 +352,13 @@ def new_ticket():
         # -----------------------------------------
         if is_confidential:
             assigned_to = config.CONFIDENTIAL_ASSIGNEE
-            mail_receivers = [config.CONFIDENTIAL_ASSIGNEE]
+            mail_receivers = [config.CONFIDENTIAL_ASSIGNEE]    # Only Pradeep receives confidential tickets
             cc = ""
             bcc = ""
         else:
             assigned_to = ""
-            mail_receivers = config.RECEIVERS
+            mail_receivers = sheets_utils.get_acceptors(creds)    # Send notification to every acceptor from Google Sheet
+            mail_receivers = list(dict.fromkeys(mail_receivers))  # Remove duplicates if any
         
         signature = gmail_utils.get_signature(creds)
         email_subject = f"[{ticket_id}] {subject}"
@@ -423,7 +424,7 @@ def new_ticket():
                 config.CONFIDENTIAL_TEXT if is_confidential
             else high_priority_reason,
             "Status": "Open",
-            "Assigned To": "",
+            "Assigned To": assigned_to,
             "Attachment": ", ".join(attachment_names),
             "Updated Date": now_string,
             "Closed Date": "",
