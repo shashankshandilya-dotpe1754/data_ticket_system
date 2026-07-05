@@ -209,6 +209,11 @@ def transfer_ticket(ticket_id):
 
     old_ticket = sheets_utils.get_ticket(creds, ticket_id)
 
+    email = email.lower()
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket["Assigned To"].lower() != email:
+        abort(403)
+
     if old_ticket is None:
         abort(404)
 
@@ -469,6 +474,14 @@ def dashboard():
 
     tickets = sheets_utils.get_all_tickets(creds)
 
+    email = email.lower()
+    
+    if email != "pradeep.singh1@dotpe.in":
+        tickets = [
+            t for t in tickets
+            if t.get("Assigned To", "").lower() == email
+        ]
+
     selected_status = request.args.get("status", "All")
     selected_priority = request.args.get("priority", "All")
     selected_assignee = request.args.get("assigned_to", "All")
@@ -529,6 +542,11 @@ def ticket_detail(ticket_id):
 
     ticket = sheets_utils.get_ticket(creds, ticket_id)
 
+    email = email.lower()
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket["Assigned To"].lower() != email:
+        abort(403)
+
     if ticket is None:
         abort(404)
 
@@ -578,6 +596,11 @@ def update_ticket(ticket_id):
     email, creds = current_user()
 
     ticket = sheets_utils.get_ticket(creds, ticket_id)
+
+    email = email.lower()
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket["Assigned To"].lower() != email:
+        abort(403)
 
     if ticket is None:
         abort(404)
