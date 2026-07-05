@@ -4,7 +4,117 @@
   <h3>My Tickets</h3>
   <a href="{{ url_for('new_ticket') }}" class="btn btn-primary">+ New Ticket</a>
 </div>
+<form method="GET">
 
+    <div class="row g-2 mb-3">
+
+        <div class="col-md-2">
+            <input
+                type="date"
+                class="form-control"
+                name="created_date"
+                value="{{ current_created_date }}">
+        </div>
+
+        <div class="col-md-2">
+            <select
+                class="form-select"
+                name="assigned_to">
+
+                <option value="">All Assignees</option>
+
+                {% for a in acceptors %}
+
+                <option
+                    value="{{ a }}"
+                    {% if current_assignee==a %}selected{% endif %}>
+
+                    {{ a }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <div class="col-md-2">
+
+            <select
+                class="form-select"
+                name="priority">
+
+                <option value="">All Priorities</option>
+
+                {% for p in priorities %}
+
+                <option
+                    value="{{ p }}"
+                    {% if current_priority==p %}selected{% endif %}>
+
+                    {{ p }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+        <div class="col-md-2">
+
+            <select
+                class="form-select"
+                name="status">
+
+                <option value="">All Status</option>
+
+                {% for s in statuses %}
+
+                <option
+                    value="{{ s }}"
+                    {% if current_status==s %}selected{% endif %}>
+
+                    {{ s }}
+
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+    </div>
+
+    <div class="input-group mb-4">
+
+        <input
+            type="text"
+            class="form-control"
+            name="search"
+            value="{{ current_search }}"
+            placeholder="Search Ticket ID, Subject, Parent Ticket ID, Previous Ticket ID">
+
+        <button
+            class="btn btn-primary">
+
+            Search
+
+        </button>
+
+        <a
+            class="btn btn-secondary"
+            href="{{ url_for('my_tickets') }}">
+
+            Clear
+
+        </a>
+
+    </div>
+
+</form>
 <table class="table table-hover table-bordered bg-white">
   <thead class="table-light">
     <tr>
