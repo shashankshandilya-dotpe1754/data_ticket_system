@@ -579,12 +579,13 @@ def dashboard():
     tickets = sheets_utils.get_all_tickets(creds)
 
     email = email.lower()
-    # Only Pradeep can see confidential tickets
-    if email != "pradeep.singh1@dotpe.in":
-        tickets = [
-            t for t in tickets
-            if str(t.get("Requestor Email", "")).lower() != "confidential"
-        ]
+
+# Only Pradeep can access confidential tickets
+    if (
+        email != "pradeep.singh1@dotpe.in"
+        and ticket.get("Requestor Email", "").lower() == "confidential"
+    ):
+        abort(403)
 
     # -----------------------------
     # Filters
