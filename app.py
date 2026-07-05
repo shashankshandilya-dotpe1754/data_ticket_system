@@ -41,25 +41,26 @@ os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 # ==========================================================
 
 @app.context_processor
-def inject_role():
-    email = session.get("email")
+def inject_globals():
+
+    email = session.get("email", "").lower()
+
+    try:
+        acceptors = team_status.get_assignable_acceptors()
+    except Exception:
+        acceptors = []
 
     return {
+
         "is_current_user_acceptor":
-            bool(email and config.is_acceptor_email(email))
+            config.is_acceptor_email(email),
+
+        "is_admin":
+            email == "pradeep.singh1@dotpe.in",
+
+        "acceptors":
+            acceptors,
     }
-
-
-@app.context_processor
-def inject_acceptors():
-    try:
-        return {
-            "acceptors": team_status.get_assignable_acceptors()
-        }
-    except Exception:
-        return {
-            "acceptors": []
-        }
 
 
 def current_user():
