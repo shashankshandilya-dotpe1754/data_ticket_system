@@ -780,70 +780,106 @@ def update_ticket(ticket_id):
     email, creds = current_user()
 
     ticket = sheets_utils.get_ticket(creds, ticket_id)
-    
+
     if ticket is None:
         abort(404)
-        
+
     email = email.lower()
-    # Pradeep can update every ticket
+
+    # --------------------------------------------------
+    # Permission Check
+    # --------------------------------------------------
+
+    # Pradeep can update everything.
+    # Other acceptors:
+    #   - Cannot update Confidential tickets.
+    #   - Can update unassigned tickets (first pickup).
+    #   - Can update only their own assigned tickets.
     if email != "pradeep.singh1@dotpe.in":
+
         if (
             str(ticket.get("Requestor Email", "")).strip().lower()
             == config.CONFIDENTIAL_TEXT.lower()
         ):
             abort(403)
 
-    if assigned_to not in ("", email):
-        abort(403)
-    
+        assigned_to = ticket.get("Assigned To", "").strip().lower()
+
+        if assigned_to not in ("", email):
+            abort(403)
+
+    # --------------------------------------------------
+    # Existing values
+    # --------------------------------------------------
+
     old_status = ticket.get("Status", "")
-    old_assignee = ticket.get("Assigned To", "")
-    # Automatically assign the ticket to the current acceptor
-    # when they update an unassigned ticket.
-    if old_assignee.strip() == "":
-        new_assignee = email
+    old_assignee = ticket.get("Assigned To", "").strip()
 
     new_status = request.form.get("status", old_status)
     new_assignee = request.form.get("assigned_to", old_assignee)
 
-    acceptor_note_html = request.form.get("acceptor_description_html", "").strip()
+    # --------------------------------------------------
+    # Auto Pickup
+    # --------------------------------------------------
 
-    # Quill's "empty" state is literally "<p><br></p>", not "".
+    # If ticket is unassigned, automatically assign it
+    # to the acceptor who is updating it.
+    if old_assignee == "":
+        new_assignee = email
+
+    acceptor_note_html = request.form.get(
+        "acceptor_description_html", ""
+    ).strip()
+
     note_is_empty = acceptor_note_html in ("", "<p><br></p>")
 
     now = datetime.datetime.now(config.IST)
     now_string = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    updates = {"Updated Date": now_string}
+    updates = {
+        "Updated Date": now_string
+    }
+
     email_changes = []
 
-    # --------------------------------------------
+    # --------------------------------------------------
     # Status
-    # --------------------------------------------
+    # --------------------------------------------------
 
     if new_status != old_status:
+
         updates["Status"] = new_status
+
         email_changes.append(
             f"<li>Status changed from <b>{old_status}</b> to <b>{new_status}</b></li>"
         )
+
         if new_status in ("Resolved", "Closed"):
             updates["Closed Date"] = now_string
 
-    # --------------------------------------------
+    # --------------------------------------------------
     # Assignment
-    # --------------------------------------------
+    # --------------------------------------------------
 
     if new_assignee != old_assignee:
-        updates["Assigned To"] = new_assignee
-        email_changes.append(f"<li>Assigned to <b>{new_assignee}</b></li>")
 
-    # --------------------------------------------
-    # Notes — stored as PLAIN TEXT in the Sheet, sent as rich HTML in email
-    # --------------------------------------------
+        updates["Assigned To"] = new_assignee
+
+        email_changes.append(
+            f"<li>Assigned to <b>{new_assignee}</b></li>"
+        )
+
+    # --------------------------------------------------
+    # Notes
+    # --------------------------------------------------
 
     if not note_is_empty:
+
         existing = ticket.get("Acceptor Description", "")
-        note_plain = sheets_utils.html_to_plain_text(acceptor_note_html)
+
+        note_plain = sheets_utils.html_to_plain_text(
+            acceptor_note_html
+        )
 
         entry = (
             f"{now_string} - {email}\n"
@@ -851,57 +887,92 @@ def update_ticket(ticket_id):
             "-----------------------------------\n"
         )
 
-        updates["Acceptor Description"] = (existing + "\n" + entry) if existing else entry
+        updates["Acceptor Description"] = (
+            existing + "\n" + entry
+            if existing
+            else entry
+        )
+
         email_changes.append("<li>Comment Added</li>")
 
-    # --------------------------------------------
+    # --------------------------------------------------
     # Nothing changed
-    # --------------------------------------------
+    # --------------------------------------------------
 
     if len(updates) == 1:
+
         flash("Nothing to update.", "warning")
-        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
-    # --------------------------------------------
-    # Update the Sheet (reuses the ticket dict already fetched above —
-    # no need to re-read the whole sheet to find the row again)
-    # --------------------------------------------
+        return redirect(
+            url_for(
+                "ticket_detail",
+                ticket_id=ticket_id,
+            )
+        )
 
-    sheets_utils.update_ticket_fields(creds, ticket_id, updates, ticket=ticket)
+    # --------------------------------------------------
+    # Update Google Sheet
+    # --------------------------------------------------
 
-    # --------------------------------------------
-    # Email the requestor
-    # --------------------------------------------
+    sheets_utils.update_ticket_fields(
+        creds,
+        ticket_id,
+        updates,
+        ticket=ticket,
+    )
+
+    # --------------------------------------------------
+    # Email Requestor
+    # --------------------------------------------------
 
     signature = gmail_utils.get_signature(creds)
 
     update_html = ""
+
     if email_changes:
         update_html = "<ul>" + "".join(email_changes) + "</ul>"
 
     note_html = ""
+
     if not note_is_empty:
-        note_html = f"<hr><b>Comment</b><br><br>{acceptor_note_html}"
+        note_html = (
+            f"<hr><b>Comment</b><br><br>"
+            f"{acceptor_note_html}"
+        )
 
     body = f"""
     <h3>Ticket Updated</h3>
+
     <p><b>Ticket ID :</b> {ticket_id}</p>
+
     {update_html}
+
     {note_html}
+
     <br><br>
+
     {signature}
     """
 
     default_cc = config.default_cc_for_assignee(new_assignee)
 
     attachments = []
+
     for file in request.files.getlist("attachments"):
+
         if file and file.filename:
-            attachments.append({"filename": file.filename, "data": file.read()})
+
+            attachments.append(
+                {
+                    "filename": file.filename,
+                    "data": file.read(),
+                }
+            )
 
     rfc_message_id = ticket.get("RFC Message Id")
 
     if rfc_message_id:
+
         gmail_utils.send_threaded_reply(
             creds,
             to=ticket["Requestor Email"],
@@ -911,9 +982,9 @@ def update_ticket(ticket_id):
             cc=",".join(default_cc) if default_cc else None,
             attachments=attachments,
         )
+
     else:
-        # No RFC message id on record (e.g. a ticket created before this
-        # column existed) — send as a fresh email instead of failing.
+
         gmail_utils.send_new_ticket_email(
             creds,
             to=ticket["Requestor Email"],
@@ -922,16 +993,20 @@ def update_ticket(ticket_id):
             cc=",".join(default_cc) if default_cc else None,
             attachments=attachments,
         )
+
         flash(
-            "Note: this ticket had no recorded email thread, so the "
-            "update was sent as a new email rather than a threaded reply.",
+            "Note: this ticket had no recorded email thread, so the update was sent as a new email rather than a threaded reply.",
             "warning",
         )
 
     flash("Ticket updated successfully.", "success")
 
-    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
-
+    return redirect(
+        url_for(
+            "ticket_detail",
+            ticket_id=ticket_id,
+        )
+    )
 
 print("\nREGISTERED ROUTES\n")
 for rule in app.url_map.iter_rules():
