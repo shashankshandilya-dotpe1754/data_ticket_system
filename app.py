@@ -485,7 +485,7 @@ def dashboard():
         high_priority=high_priority,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
-        acceptors=team_status.get_assignable_acceptors(),
+        acceptors=sheets_utils.get_acceptors(creds),
         availability=team_status.get_availability(),
         current_status=selected_status,
         current_priority=selected_priority,
@@ -513,7 +513,7 @@ def ticket_detail(ticket_id):
         ticket=ticket,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
-        acceptors=team_status.get_assignable_acceptors(),
+        acceptors=sheets_utils.get_acceptors(creds),
         email=email,
     )
 
@@ -803,8 +803,10 @@ def acceptor_required(func):
 
             return redirect(url_for("login"))
 
-        if not config.is_acceptor_email(email):
-
+        acceptors = sheets_utils.get_acceptors(creds)
+        
+        if not config.is_acceptor_email(email, acceptors):
+            
             abort(403)
 
         return func(*args, **kwargs)
@@ -861,7 +863,9 @@ def oauth2callback():
     print(session["credentials"])
     session["email"] = email
 
-    if auth.is_acceptor(email):
+    acceptors = sheets_utils.get_acceptors(creds)
+
+    if config.is_acceptor_email(email, acceptors):
         team_status.register_acceptor_login(email)
         return redirect(url_for("dashboard"))
     return redirect(url_for("my_tickets"))
