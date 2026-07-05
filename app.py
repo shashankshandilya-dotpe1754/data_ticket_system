@@ -618,15 +618,17 @@ def update_ticket(ticket_id):
         if file and file.filename:
             attachments.append({"filename": file.filename, "data": file.read()})
 
+    thread_id = ticket.get("Thread Id")
     rfc_message_id = ticket.get("RFC Message Id")
 
     if rfc_message_id:
         gmail_utils.send_threaded_reply(
-            creds,
+            creds=creds,
+            thread_id=thread_id,
+            rfc_message_id=rfc_message_id,
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
-            rfc_message_id=rfc_message_id,
             cc=",".join(default_cc) if default_cc else None,
             attachments=attachments,
         )
