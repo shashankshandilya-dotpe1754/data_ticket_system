@@ -1,15 +1,66 @@
+/* ======================================
+   Global
+====================================== */
+
 body{
     background:#f4f6fb;
 }
 
+/* ======================================
+   Watermark
+====================================== */
+
+.watermark{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+
+    width:650px;
+    height:350px;
+
+    background-image:url("/static/dotpe_logo.png");
+    background-repeat:no-repeat;
+    background-position:center;
+    background-size:contain;
+
+    opacity:0.08;
+
+    pointer-events:none;
+
+    z-index:-1;
+}
+
+/* ======================================
+   Navbar
+====================================== */
+
 .navbar-brand{
     font-weight:700;
+}
+
+.navbar-logo{
+    height:42px;
+    width:auto;
+    margin-left:15px;
+}
+
+/* ======================================
+   Tables
+====================================== */
+
+.table{
+    background:#ffffff;
 }
 
 .table td,
 .table th{
     vertical-align:middle;
 }
+
+/* ======================================
+   Badges
+====================================== */
 
 .badge{
     display:inline-block;
@@ -19,4 +70,38 @@ body{
     font-size:13px;
     font-weight:700;
     text-align:center;
+}
+
+/* ======================================
+   Cards
+====================================== */
+
+.card{
+    border-radius:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ======================================
+   Forms
+====================================== */
+
+.form-control,
+.form-select{
+    border-radius:6px;
+}
+
+/* ======================================
+   Buttons
+====================================== */
+
+.btn{
+    border-radius:6px;
+}
+
+/* ======================================
+   Alerts
+====================================== */
+
+.alert{
+    border-radius:8px;
 }
