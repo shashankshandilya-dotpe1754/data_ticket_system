@@ -579,13 +579,12 @@ def dashboard():
     tickets = sheets_utils.get_all_tickets(creds)
 
     email = email.lower()
-
-# Only Pradeep can access confidential tickets
-    if (
-        email != "pradeep.singh1@dotpe.in"
-        and ticket.get("Requestor Email", "").lower() == "confidential"
-    ):
-        abort(403)
+    # Pradeep can see all tickets
+    if email != "pradeep.singh1@dotpe.in":
+        tickets = [
+            t for t in tickets
+            if t.get("Assigned To", "").strip().lower() == email
+        ]
 
     # -----------------------------
     # Filters
@@ -714,9 +713,9 @@ def ticket_detail(ticket_id):
         abort(404)
         
     email = email.lower()
-    
+    # Pradeep can open every ticket
     if email != "pradeep.singh1@dotpe.in":
-        if ticket.get("Assigned To", "").lower() != email:
+        if ticket.get("Assigned To", "").strip().lower() != email:
             abort(403)
 
     return render_template(
@@ -770,9 +769,9 @@ def update_ticket(ticket_id):
         abort(404)
         
     email = email.lower()
-    
+    # Pradeep can update every ticket
     if email != "pradeep.singh1@dotpe.in":
-        if ticket.get("Assigned To", "").lower() != email:
+        if ticket.get("Assigned To", "").strip().lower() != email:
             abort(403)
     
     old_status = ticket.get("Status", "")
