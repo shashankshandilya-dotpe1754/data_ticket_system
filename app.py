@@ -487,6 +487,8 @@ def dashboard():
     selected_status = request.args.get("status", "All")
     selected_priority = request.args.get("priority", "All")
     selected_assignee = request.args.get("assigned_to", "All")
+    selected_created_date = request.args.get("created_date", "")
+    search = request.args.get("search", "").strip().lower()
 
     filtered = tickets
 
@@ -496,6 +498,44 @@ def dashboard():
         filtered = [t for t in filtered if t.get("Priority") == selected_priority]
     if selected_assignee != "All":
         filtered = [t for t in filtered if t.get("Assigned To") == selected_assignee]
+
+    # Created Date Filter
+if selected_created_date:
+    filtered = [
+        t for t in filtered
+        if t.get("Created Date", "").startswith(selected_created_date)
+    ]
+
+# Global Search
+if search:
+
+    searchable_columns = [
+
+        "Ticket ID",
+        "Requestor Email",
+        "Subject",
+        "Requestor Description",
+        "High Priority Reason",
+        "Parent Ticket ID",
+        "Previous Ticket ID",
+
+    ]
+
+    filtered = [
+
+        t
+
+        for t in filtered
+
+        if any(
+
+            search in str(t.get(col, "")).lower()
+
+            for col in searchable_columns
+
+        )
+
+    ]
 
     counts = {
         status: len([t for t in tickets if t.get("Status") == status])
@@ -529,8 +569,9 @@ def dashboard():
         current_status=selected_status,
         current_priority=selected_priority,
         current_assignee=selected_assignee,
+        current_created_date=selected_created_date,
+        current_search=search,
     )
-
 
 # ---------------------------------------------------------------------------
 # Ticket Details
