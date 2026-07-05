@@ -209,13 +209,14 @@ def transfer_ticket(ticket_id):
 
     old_ticket = sheets_utils.get_ticket(creds, ticket_id)
 
-    email = email.lower()
-    if email != "pradeep.singh1@dotpe.in":
-        if ticket["Assigned To"].lower() != email:
-        abort(403)
+email = email.lower()
 
+if email != "pradeep.singh1@dotpe.in":
     if old_ticket is None:
         abort(404)
+
+    if old_ticket.get("Assigned To", "").lower() != email:
+        abort(403)
 
     new_assignee = request.form.get("transfer_to", "").strip()
     transfer_reason = request.form.get("transfer_reason", "").strip()
@@ -543,13 +544,14 @@ def ticket_detail(ticket_id):
 
     ticket = sheets_utils.get_ticket(creds, ticket_id)
 
-    email = email.lower()
-    if email != "pradeep.singh1@dotpe.in":
-        if ticket["Assigned To"].lower() != email:
-        abort(403)
-
     if ticket is None:
         abort(404)
+        
+    email = email.lower()
+    
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket.get("Assigned To", "").lower() != email:
+            abort(403)
 
     return render_template(
         "ticket_detail.html",
@@ -597,15 +599,16 @@ def update_ticket(ticket_id):
     email, creds = current_user()
 
     ticket = sheets_utils.get_ticket(creds, ticket_id)
-
-    email = email.lower()
-    if email != "pradeep.singh1@dotpe.in":
-        if ticket["Assigned To"].lower() != email:
-        abort(403)
-
+    
     if ticket is None:
         abort(404)
-
+        
+    email = email.lower()
+    
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket.get("Assigned To", "").lower() != email:
+            abort(403)
+    
     old_status = ticket.get("Status", "")
     old_assignee = ticket.get("Assigned To", "")
 
