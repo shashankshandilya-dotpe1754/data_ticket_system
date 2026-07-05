@@ -170,10 +170,6 @@ def oauth2callback():
     return redirect(url_for("my_tickets"))
 
 # ==========================================================
-# Add/Delete User
-# ==========================================================
-
-# ==========================================================
 # Add/Delete Acceptor
 # ==========================================================
 
@@ -1360,6 +1356,11 @@ def update_ticket(ticket_id):
 
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
+print("\nREGISTERED ROUTES\n")
 
+for rule in app.url_map.iter_rules():
+    print(rule.endpoint, "->", rule.rule)
+
+print("\nEND ROUTES\n")
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
