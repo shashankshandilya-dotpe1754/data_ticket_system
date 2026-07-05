@@ -477,13 +477,17 @@ def dashboard():
     tickets = sheets_utils.get_all_tickets(creds)
 
     email = email.lower()
-    
+
+    # Only Pradeep can view every ticket
     if email != "pradeep.singh1@dotpe.in":
         tickets = [
             t for t in tickets
             if t.get("Assigned To", "").lower() == email
         ]
 
+    # -----------------------------
+    # Filters
+    # -----------------------------
     selected_status = request.args.get("status", "All")
     selected_priority = request.args.get("priority", "All")
     selected_assignee = request.args.get("assigned_to", "All")
@@ -493,63 +497,82 @@ def dashboard():
     filtered = tickets
 
     if selected_status != "All":
-        filtered = [t for t in filtered if t.get("Status") == selected_status]
+        filtered = [
+            t for t in filtered
+            if t.get("Status") == selected_status
+        ]
+
     if selected_priority != "All":
-        filtered = [t for t in filtered if t.get("Priority") == selected_priority]
+        filtered = [
+            t for t in filtered
+            if t.get("Priority") == selected_priority
+        ]
+
     if selected_assignee != "All":
-        filtered = [t for t in filtered if t.get("Assigned To") == selected_assignee]
+        filtered = [
+            t for t in filtered
+            if t.get("Assigned To") == selected_assignee
+        ]
 
+    # -----------------------------
     # Created Date Filter
-if selected_created_date:
-    filtered = [
-        t for t in filtered
-        if t.get("Created Date", "").startswith(selected_created_date)
-    ]
+    # -----------------------------
+    if selected_created_date:
+        filtered = [
+            t for t in filtered
+            if t.get("Created Date", "").startswith(selected_created_date)
+        ]
 
-# Global Search
-if search:
+    # -----------------------------
+    # Global Search
+    # -----------------------------
+    if search:
 
-    searchable_columns = [
+        searchable_columns = [
+            "Ticket ID",
+            "Requestor Email",
+            "Subject",
+            "Requestor Description",
+            "High Priority Reason",
+            "Parent Ticket ID",
+            "Previous Ticket ID",
+        ]
 
-        "Ticket ID",
-        "Requestor Email",
-        "Subject",
-        "Requestor Description",
-        "High Priority Reason",
-        "Parent Ticket ID",
-        "Previous Ticket ID",
+        filtered = [
+            t
+            for t in filtered
+            if any(
+                search in str(t.get(col, "")).lower()
+                for col in searchable_columns
+            )
+        ]
 
-    ]
-
-    filtered = [
-
-        t
-
-        for t in filtered
-
-        if any(
-
-            search in str(t.get(col, "")).lower()
-
-            for col in searchable_columns
-
-        )
-
-    ]
-
+    # -----------------------------
+    # Dashboard Counts
+    # -----------------------------
     counts = {
-        status: len([t for t in tickets if t.get("Status") == status])
+        status: len([
+            t for t in tickets
+            if t.get("Status") == status
+        ])
         for status in config.STATUS_OPTIONS
     }
 
     total_tickets = len(tickets)
     open_tickets = counts.get("Open", 0)
     progress_tickets = counts.get("In Progress", 0)
-    closed_tickets = counts.get("Closed", 0)
     resolved_tickets = counts.get("Resolved", 0)
-    high_priority = len([t for t in tickets if t.get("Priority") == "High"])
+    closed_tickets = counts.get("Closed", 0)
 
-    filtered.sort(key=lambda x: x.get("Updated Date", ""), reverse=True)
+    high_priority = len([
+        t for t in tickets
+        if t.get("Priority") == "High"
+    ])
+
+    filtered.sort(
+        key=lambda x: x.get("Updated Date", ""),
+        reverse=True,
+    )
 
     return render_template(
         "acceptor_dashboard.html",
