@@ -117,10 +117,22 @@ CONFIDENTIAL_TEXT = "Confidential"
 
 
 def default_cc_for_assignee(assignee_email):
+
     if not assignee_email:
         return []
 
-    return DEFAULT_CC_RULES.get(assignee_email, [])
+    assignee_email = assignee_email.lower()
+
+    # Pradeep doesn't need anyone in CC
+    if assignee_email == CONFIDENTIAL_ASSIGNEE.lower():
+        return []
+
+    # Existing explicit rules
+    if assignee_email in DEFAULT_CC_RULES:
+        return DEFAULT_CC_RULES[assignee_email]
+
+    # Any newly added acceptor -> CC Pradeep
+    return [CONFIDENTIAL_ASSIGNEE]
 
 
 STATUS_OPTIONS = [
