@@ -401,17 +401,29 @@ def new_ticket():
         ticket = {
             "Ticket ID": ticket_id,
             "Created Date": now_string,
-            "Requestor Email": email,
-            "Subject": subject,
-            "Requestor Description": sheets_utils.html_to_plain_text(description_html),
+            
+            "Requestor Email":
+                config.CONFIDENTIAL_TEXT if is_confidential else email,
+            
+            "Subject":
+                config.CONFIDENTIAL_TEXT if is_confidential else subject,
+            
+            "Requestor Description":
+                config.CONFIDENTIAL_TEXT if is_confidential
+                else sheets_utils.html_to_plain_text(description_html),
+            
             "Priority": priority,
-            "High Priority Reason": high_priority_reason,
+            
+            "High Priority Reason":
+                config.CONFIDENTIAL_TEXT if is_confidential
+            else high_priority_reason,
             "Status": "Open",
             "Assigned To": "",
             "Attachment": ", ".join(attachment_names),
             "Updated Date": now_string,
             "Closed Date": "",
-            "Acceptor Description": "",
+            "Acceptor Description":
+                config.CONFIDENTIAL_TEXT if is_confidential else "",
             "Thread Id": sent["thread_id"],
             "RFC Message Id": rfc_message_id,
         }
