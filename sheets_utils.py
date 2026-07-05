@@ -181,27 +181,32 @@ def transfer_ticket(creds, old_ticket: dict, new_assignee: str,
 
 
 def get_acceptors(creds):
-    sheet = get_sheet(creds)
 
-    ws = sheet.worksheet("Acceptors")
+    resp = requests.get(
+        _values_url("Acceptors!A:A"),
+        headers=_headers(creds),
+        timeout=20,
+    )
 
-    values = ws.get_all_values()
+    resp.raise_for_status()
+
+    values = resp.json().get("values", [])
 
     if len(values) <= 1:
         return []
 
-    return [
-        row[0].strip().lower()
-        for row in values[1:]
-        if row and row[0].strip()
-    ]
+    acceptors = []
+
+    for row in values[1:]:
+
+        if row and row[0].strip():
+
+            acceptors.append(row[0].strip().lower())
+
+    return acceptors
 
 
 def add_acceptor(creds, email):
-
-    sheet = get_sheet(creds)
-
-    ws = sheet.worksheet("Acceptors")
 
     email = email.strip().lower()
 
@@ -210,27 +215,98 @@ def add_acceptor(creds, email):
     if email in existing:
         return False
 
-    ws.append_row([email])
+    resp = requests.post(
+
+        _values_url("Acceptors!A:A", ":append"),
+
+        headers=_headers(creds),
+
+        params={
+            "valueInputOption": "USER_ENTERED",
+            "insertDataOption": "INSERT_ROWS",
+        },
+
+        json={
+            "values": [
+                [email]
+            ]
+        },
+
+        timeout=20,
+    )
+
+    resp.raise_for_status()
 
     return True
 
 
 def delete_acceptor(creds, email):
 
-    sheet = get_sheet(creds)
-
-    ws = sheet.worksheet("Acceptors")
-
     email = email.strip().lower()
 
-    values = ws.get_all_values()
+    resp = requests.get(
+        _values_url("Acceptors!A:A"),
+        headers=_headers(creds),
+        timeout=20,
+    )
 
-    for idx, row in enumerate(values[1:], start=2):
+    resp.raise_for_status()
 
-        if row[0].strip().lower() == email:
+    values = resp.json().get("values", [])
 
-            ws.delete_rows(idx)
+    row_number = None
 
-            return True
+    for idx, row in enumerate(values[1:], start=1):
 
-    return False
+        if row and row[0].strip().lower() == email:
+
+            row_number = idx
+
+            break
+
+    if row_number is None:
+        return False
+
+    requests_body = {
+
+        "requests": [
+
+            {
+
+                "deleteDimension": {
+
+                    "range": {
+
+                        "sheetId": config.ACCEPTOR_SHEET_ID,
+
+                        "dimension": "ROWS",
+
+                        "startIndex": row_number,
+
+                        "endIndex": row_number + 1
+
+                    }
+
+                }
+
+            }
+
+        ]
+
+    }
+
+    resp = requests.post(
+
+        f"{SHEETS_API_BASE}/{config.SPREADSHEET_ID}:batchUpdate",
+
+        headers=_headers(creds),
+
+        json=requests_body,
+
+        timeout=20,
+
+    )
+
+    resp.raise_for_status()
+
+    return True
