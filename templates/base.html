@@ -24,7 +24,7 @@ Dashboard
 My Ticket
 </a>
 
-{% if session.get("email","").lower() == "pradeep.singh1@dotpe.in" %}
+{% if is_admin %}
 
 <div class="dropdown d-inline">
 
