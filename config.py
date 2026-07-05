@@ -101,6 +101,14 @@ RECEIVERS = [
     "sahil.kaku@dotpe.in",
 ]
 
+# Users allowed to manage dashboard access
+
+MANAGE_ACCESS_USERS = [
+    "pradeep.singh1@dotpe.in",
+    "shashank.shandilya@dotpe.in",
+    "sahil.kaku@dotpe.in",
+]
+
 DEFAULT_CC_RULES = {
     "shashank.shandilya@dotpe.in": [
         "pradeep.singh1@dotpe.in"
