@@ -105,8 +105,8 @@ def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
     return {"thread_id": sent.get("threadId"), "message_id": sent["id"]}
 
 
-def send_threaded_reply(creds, to, subject, html_body, rfc_message_id,
-                         cc=None, bcc=None, attachments=None):
+def send_threaded_reply(creds, thread_id, rfc_message_id, to, subject, 
+                        html_body, cc=None, bcc=None, attachments=None):
     """No `threadId` parameter — Gmail's threadId is scoped to a single
     mailbox, so reusing it from a different account 404s. Threading in
     the requestor's inbox comes from In-Reply-To/References matching the
@@ -115,15 +115,23 @@ def send_threaded_reply(creds, to, subject, html_body, rfc_message_id,
     if not subject.lower().startswith("re:"):
         subject = f"Re: {subject}"
     body = _build_mime(
-        to, subject, html_body, cc=cc, bcc=bcc, attachments=attachments,
-        in_reply_to=rfc_message_id, references=rfc_message_id,
-    )
+        to=to, subject=subject, html_body=html_body, cc=cc, 
+        bcc=bcc, attachments=attachments, in_reply_to=rfc_message_id, 
+        references=rfc_message_id, thread_id=thread_id,)
     resp = requests.post(
         f"{GMAIL_API_BASE}/messages/send",
         headers=_headers(creds),
         json=body,
         timeout=30,
     )
+    
+    resp = requests.post(
+        f"{GMAIL_API_BASE}/messages/send",
+        headers=_headers(creds),
+        json=body,
+        timeout=30,
+    )
+
     resp.raise_for_status()
     return resp.json()
 
