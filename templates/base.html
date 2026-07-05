@@ -24,16 +24,101 @@ Dashboard
 My Ticket
 </a>
 
-<a class="btn btn-outline-light btn-sm me-2"
-   href="{{ url_for('availability') }}">
-Availability
-</a>
+{% if session.get("email","").lower() == "pradeep.singh1@dotpe.in" %}
+
+<div class="dropdown d-inline">
+
+    <button
+        class="btn btn-outline-light btn-sm dropdown-toggle"
+        data-bs-toggle="dropdown">
+
+        Manage Access
+
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-end p-3"
+         style="width:420px;">
+
+        <form method="POST"
+              action="{{ url_for('add_acceptor') }}">
+
+            <label class="form-label fw-bold">
+
+                Add Acceptor
+
+            </label>
+
+            <div class="input-group mb-3">
+
+                <input
+                    class="form-control"
+                    type="email"
+                    name="email"
+                    placeholder="Enter email"
+                    required>
+
+                <button class="btn btn-success">
+
+                    Add
+
+                </button>
+
+            </div>
+
+        </form>
+
+        <hr>
+
+        <form method="POST"
+              action="{{ url_for('delete_acceptor') }}">
+
+            <label class="form-label fw-bold">
+
+                Delete Acceptor
+
+            </label>
+
+            <div class="input-group">
+
+                <select
+                    class="form-select"
+                    name="email"
+                    required>
+
+                    <option value="">Select Acceptor</option>
+
+                    {% for user in acceptors %}
+                        <option value="{{ user }}">
+                            {{ user }}
+                        </option>
+                    {% endfor %}
+
+                </select>
+
+                <button class="btn btn-danger">
+
+                    Delete
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
 {% endif %}
 
 <a class="btn btn-outline-light btn-sm"
+   href="{{ url_for('availability') }}">
+    Availability
+</a>
+
+<a class="btn btn-outline-light btn-sm"
    href="{{ url_for('logout') }}">
-Logout
+    Logout
 </a>
       {% endif %}
     </div>
