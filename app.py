@@ -46,7 +46,7 @@ def inject_globals():
     email = session.get("email", "").lower()
 
     try:
-        acceptors = team_status.get_assignable_acceptors()
+        acceptors = acceptors=team_status.get_assignable_acceptors(creds),
     except Exception:
         acceptors = []
 
@@ -555,7 +555,7 @@ def my_tickets():
         "my_tickets.html",
         tickets=tickets,
         email=email,
-        acceptors=team_status.get_assignable_acceptors(),
+        acceptors=acceptors=team_status.get_assignable_acceptors(creds),
         priorities=config.PRIORITY_OPTIONS,
         statuses=config.STATUS_OPTIONS,
         current_created_date=created_date,
@@ -689,7 +689,7 @@ def dashboard():
         high_priority=high_priority,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
-        acceptors=team_status.get_assignable_acceptors(),
+        acceptors=acceptors=team_status.get_assignable_acceptors(creds),
         availability=team_status.get_availability(),
         current_status=selected_status,
         current_priority=selected_priority,
@@ -724,7 +724,7 @@ def ticket_detail(ticket_id):
         ticket=ticket,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
-        acceptors=team_status.get_assignable_acceptors(),
+        acceptors=acceptors=team_status.get_assignable_acceptors(creds),
         email=email,
     )
 
