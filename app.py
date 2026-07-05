@@ -295,6 +295,8 @@ def new_ticket():
         cc = request.form.get("cc", "").strip()
         bcc = request.form.get("bcc", "").strip()
 
+        is_confidential = request.form.get("is_confidential") == "on"
+
         # -----------------------------------------
         # Validation
         # -----------------------------------------
@@ -343,7 +345,15 @@ def new_ticket():
         # -----------------------------------------
         # Email (rich HTML — separate from what's stored in the Sheet)
         # -----------------------------------------
-
+        if is_confidential:
+            assigned_to = config.CONFIDENTIAL_ASSIGNEE
+            mail_receivers = [config.CONFIDENTIAL_ASSIGNEE]
+            cc = ""
+            bcc = ""
+        else:
+            assigned_to = ""
+            mail_receivers = config.RECEIVERS
+        
         signature = gmail_utils.get_signature(creds)
         email_subject = f"[{ticket_id}] {subject}"
 
@@ -374,7 +384,7 @@ def new_ticket():
 
         sent = gmail_utils.send_new_ticket_email(
             creds,
-            to=", ".join(config.RECEIVERS),
+            to=", ".join(mail_receivers),
             subject=email_subject,
             html_body=email_body,
             cc=cc if cc else None,
