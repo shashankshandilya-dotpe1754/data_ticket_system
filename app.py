@@ -169,49 +169,34 @@ def oauth2callback():
         return redirect(url_for("dashboard"))
     return redirect(url_for("my_tickets"))
 
+
+
 # ==========================================================
 # Add/Delete Acceptor
 # ==========================================================
-
 @app.route("/acceptor/add", methods=["POST"])
 @acceptor_required
 def add_acceptor():
-
     email, creds = current_user()
-
-    new_email = request.form.get("email", "").strip().lower()
-
+    new_email=request.form.get("email","").strip().lower()
     if not new_email:
-        flash("Please enter an email.", "danger")
+        flash("Please enter an email.","warning")
         return redirect(url_for("dashboard"))
-
-    sheets_utils.add_acceptor(creds, new_email)
-
-    flash("Acceptor added successfully.", "success")
-
+    sheets_utils.add_acceptor(creds,new_email)
+    flash("Acceptor added successfully.","success")
     return redirect(url_for("dashboard"))
-
 
 @app.route("/acceptor/delete", methods=["POST"])
 @acceptor_required
 def delete_acceptor():
-
     email, creds = current_user()
-
-    remove_email = request.form.get("email", "").strip().lower()
-
-    if remove_email == email.lower():
-
-        flash("You cannot delete yourself.", "warning")
-
+    remove_email=request.form.get("email","").strip().lower()
+    if remove_email==email.lower():
+        flash("You cannot delete yourself.","warning")
         return redirect(url_for("dashboard"))
-
-    sheets_utils.delete_acceptor(creds, remove_email)
-
-    flash("Acceptor deleted successfully.", "success")
-
+    sheets_utils.delete_acceptor(creds,remove_email)
+    flash("Acceptor deleted successfully.","success")
     return redirect(url_for("dashboard"))
-
 
 # ==========================================================
 # Transfer Ticket
@@ -489,7 +474,7 @@ def dashboard():
         high_priority=high_priority,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
-        acceptors=sheets_utils.get_acceptors(creds),
+        acceptors=team_status.get_assignable_acceptors(),
         availability=team_status.get_availability(),
         current_status=selected_status,
         current_priority=selected_priority,
@@ -517,7 +502,7 @@ def ticket_detail(ticket_id):
         ticket=ticket,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
-        acceptors=sheets_utils.get_acceptors(creds),
+        acceptors=team_status.get_assignable_acceptors(),
         email=email,
     )
 
@@ -661,17 +646,15 @@ def update_ticket(ticket_id):
         if file and file.filename:
             attachments.append({"filename": file.filename, "data": file.read()})
 
-    thread_id = ticket.get("Thread Id")
     rfc_message_id = ticket.get("RFC Message Id")
 
     if rfc_message_id:
         gmail_utils.send_threaded_reply(
-            creds=creds,
-            thread_id=thread_id,
-            rfc_message_id=rfc_message_id,
+            creds,
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
+            rfc_message_id=rfc_message_id,
             cc=",".join(default_cc) if default_cc else None,
             attachments=attachments,
         )
@@ -696,6 +679,11 @@ def update_ticket(ticket_id):
 
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
+
+print("\nREGISTERED ROUTES\n")
+for rule in app.url_map.iter_rules():
+    print(rule.endpoint,"->",rule.rule)
+print("\nEND ROUTES\n")
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
@@ -807,10 +795,8 @@ def acceptor_required(func):
 
             return redirect(url_for("login"))
 
-        acceptors = sheets_utils.get_acceptors(creds)
-        
-        if not config.is_acceptor_email(email, acceptors):
-            
+        if not config.is_acceptor_email(email):
+
             abort(403)
 
         return func(*args, **kwargs)
@@ -867,9 +853,7 @@ def oauth2callback():
     print(session["credentials"])
     session["email"] = email
 
-    acceptors = sheets_utils.get_acceptors(creds)
-
-    if config.is_acceptor_email(email, acceptors):
+    if auth.is_acceptor(email):
         team_status.register_acceptor_login(email)
         return redirect(url_for("dashboard"))
     return redirect(url_for("my_tickets"))
@@ -1356,11 +1340,11 @@ def update_ticket(ticket_id):
 
     return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
+
 print("\nREGISTERED ROUTES\n")
-
 for rule in app.url_map.iter_rules():
-    print(rule.endpoint, "->", rule.rule)
-
+    print(rule.endpoint,"->",rule.rule)
 print("\nEND ROUTES\n")
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
