@@ -173,20 +173,28 @@ def oauth2callback():
 # Add/Delete User
 # ==========================================================
 
+# ==========================================================
+# Add/Delete Acceptor
+# ==========================================================
+
 @app.route("/acceptor/add", methods=["POST"])
 @acceptor_required
 def add_acceptor():
 
     email, creds = current_user()
 
-    new_email = request.form["email"]
+    new_email = request.form.get("email", "").strip().lower()
+
+    if not new_email:
+        flash("Please enter an email.", "danger")
+        return redirect(url_for("dashboard"))
 
     sheets_utils.add_acceptor(creds, new_email)
 
-    flash("Acceptor added successfully.")
+    flash("Acceptor added successfully.", "success")
 
     return redirect(url_for("dashboard"))
-    
+
 
 @app.route("/acceptor/delete", methods=["POST"])
 @acceptor_required
@@ -194,62 +202,17 @@ def delete_acceptor():
 
     email, creds = current_user()
 
-    remove_email = request.form["email"]
+    remove_email = request.form.get("email", "").strip().lower()
 
-    if remove_email.lower() == email.lower():
+    if remove_email == email.lower():
 
-        flash("You cannot delete yourself.")
+        flash("You cannot delete yourself.", "warning")
 
         return redirect(url_for("dashboard"))
 
     sheets_utils.delete_acceptor(creds, remove_email)
 
-    flash("Acceptor deleted.")
-
-    return redirect(url_for("dashboard"))
-
-
-@app.route("/availability", methods=["GET", "POST"])
-@acceptor_required
-def availability():
-    ...
-    # (existing code, untouched)
-
-
-@app.route("/add-acceptor", methods=["POST"])
-@acceptor_required
-def add_acceptor():
-    email, creds = current_user()
-    new_email = request.form.get("email", "").strip()
-
-    if not new_email:
-        flash("Please enter an email address.", "error")
-        return redirect(url_for("dashboard"))
-
-    added = sheets_utils.add_acceptor(creds, new_email)
-    if added:
-        flash(f"{new_email} has been added as an acceptor.", "success")
-    else:
-        flash(f"{new_email} is already an acceptor.", "warning")
-
-    return redirect(url_for("dashboard"))
-
-
-@app.route("/delete-acceptor", methods=["POST"])
-@acceptor_required
-def delete_acceptor():
-    email, creds = current_user()
-    target_email = request.form.get("email", "").strip()
-
-    if not target_email:
-        flash("Please select an acceptor to delete.", "error")
-        return redirect(url_for("dashboard"))
-
-    removed = sheets_utils.delete_acceptor(creds, target_email)
-    if removed:
-        flash(f"{target_email} has been removed as an acceptor.", "success")
-    else:
-        flash(f"{target_email} was not found.", "warning")
+    flash("Acceptor deleted successfully.", "success")
 
     return redirect(url_for("dashboard"))
 
