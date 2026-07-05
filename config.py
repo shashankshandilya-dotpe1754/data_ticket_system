@@ -148,11 +148,14 @@ AVAILABILITY_OPTIONS = [
 ]
 
 
-def is_acceptor_email(email):
-    return email.lower() in [
-        x.lower()
-        for x in ACCEPTORS
-    ]
+def is_acceptor_email(email, acceptors=None):
+
+    email = email.lower()
+
+    if acceptors is None:
+        acceptors = ACCEPTORS
+
+    return email in [x.lower() for x in acceptors]
 
 
 # ==========================================================
