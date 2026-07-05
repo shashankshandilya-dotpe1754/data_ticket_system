@@ -56,6 +56,16 @@
 <form method="GET" class="row g-2 mb-4">
 
     <div class="col-auto">
+        
+        <input
+            type="date"
+            class="form-control"
+            name="created_date"
+            value="{{ current_created_date }}"
+            onchange="this.form.submit()">
+    </div>
+
+    <div class="col-auto">
 
         <select
             class="form-select"
@@ -140,6 +150,45 @@
     </div>
 
 </form>
+
+
+<!-- ======================================================= -->
+<!-- Search Bar -->
+<!-- ======================================================= -->
+<form method="GET" class="mb-4">
+
+    <!-- Preserve existing filters -->
+
+    <input type="hidden" name="status" value="{{ current_status }}">
+    <input type="hidden" name="priority" value="{{ current_priority }}">
+    <input type="hidden" name="assigned_to" value="{{ current_assignee }}">
+    <input type="hidden" name="created_date" value="{{ current_created_date }}">
+
+    <div class="input-group">
+
+        <input
+            type="text"
+            class="form-control"
+            name="search"
+            placeholder="Search Ticket ID, Requestor, Subject, Description, High Priority Reason, Parent Ticket, Previous Ticket..."
+            value="{{ current_search }}">
+
+        <button class="btn btn-primary">
+            Search
+        </button>
+
+        <a href="{{ url_for('dashboard') }}"
+           class="btn btn-secondary">
+
+            Clear
+
+        </a>
+
+    </div>
+
+</form>
+
+
 
 <!-- ======================================================= -->
 <!-- Manage Acceptors -->
