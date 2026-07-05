@@ -583,7 +583,16 @@ def dashboard():
     if email != "pradeep.singh1@dotpe.in":
         tickets = [
             t for t in tickets
-            if t.get("Assigned To", "").strip().lower() == email
+            if (
+                str(t.get("Requestor Email", "")).strip().lower()
+                != config.CONFIDENTIAL_TEXT.lower()
+            )
+            and
+            (
+                t.get("Assigned To", "").strip() == ""
+                or
+                t.get("Assigned To", "").strip().lower() == email
+            )
         ]
 
     # -----------------------------
@@ -715,7 +724,14 @@ def ticket_detail(ticket_id):
     email = email.lower()
     # Pradeep can open every ticket
     if email != "pradeep.singh1@dotpe.in":
-        if ticket.get("Assigned To", "").strip().lower() != email:
+        if (
+            str(ticket.get("Requestor Email", "")).strip().lower()
+            == config.CONFIDENTIAL_TEXT.lower()
+        ):
+            abort(403)
+        
+        assigned_to = ticket.get("Assigned To", "").strip().lower()
+        if assigned_to not in ("", email):
             abort(403)
 
     return render_template(
@@ -771,8 +787,14 @@ def update_ticket(ticket_id):
     email = email.lower()
     # Pradeep can update every ticket
     if email != "pradeep.singh1@dotpe.in":
-        if ticket.get("Assigned To", "").strip().lower() != email:
+        if (
+            str(ticket.get("Requestor Email", "")).strip().lower()
+            == config.CONFIDENTIAL_TEXT.lower()
+        ):
             abort(403)
+
+    if ticket.get("Assigned To", "").strip().lower() != email:
+        abort(403)
     
     old_status = ticket.get("Status", "")
     old_assignee = ticket.get("Assigned To", "")
