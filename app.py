@@ -55,8 +55,9 @@ def inject_globals():
         "is_current_user_acceptor":
             config.is_acceptor_email(email),
 
-        "is_admin":
-            email == "pradeep.singh1@dotpe.in",
+        "is_admin": email.lower() in [
+            x.lower() for x in config.MANAGE_ACCESS_USERS
+        ],
 
         "acceptors":
             acceptors,
