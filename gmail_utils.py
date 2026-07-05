@@ -117,14 +117,7 @@ def send_threaded_reply(creds, thread_id, rfc_message_id, to, subject,
     body = _build_mime(
         to=to, subject=subject, html_body=html_body, cc=cc, 
         bcc=bcc, attachments=attachments, in_reply_to=rfc_message_id, 
-        references=rfc_message_id, thread_id=thread_id,)
-    resp = requests.post(
-        f"{GMAIL_API_BASE}/messages/send",
-        headers=_headers(creds),
-        json=body,
-        timeout=30,
-    )
-    
+        references=rfc_message_id,)
     resp = requests.post(
         f"{GMAIL_API_BASE}/messages/send",
         headers=_headers(creds),
