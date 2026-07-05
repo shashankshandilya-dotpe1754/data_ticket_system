@@ -793,11 +793,15 @@ def update_ticket(ticket_id):
         ):
             abort(403)
 
-    if ticket.get("Assigned To", "").strip().lower() != email:
+    if assigned_to not in ("", email):
         abort(403)
     
     old_status = ticket.get("Status", "")
     old_assignee = ticket.get("Assigned To", "")
+    # Automatically assign the ticket to the current acceptor
+    # when they update an unassigned ticket.
+    if old_assignee.strip() == "":
+        new_assignee = email
 
     new_status = request.form.get("status", old_status)
     new_assignee = request.form.get("assigned_to", old_assignee)
