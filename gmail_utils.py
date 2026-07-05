@@ -80,18 +80,20 @@ def _build_mime(to, subject, html_body, cc=None, bcc=None, attachments=None,
         msg.attach(part)
 
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    
     payload = {
         "raw": raw
     }
-                     if thread_id:
-                         payload["threadId"] = thread_id
-                    return payload
+                    
+    if thread_id:
+        payload["threadId"] = thread_id
+        
+    return payload
 
 
 def send_new_ticket_email(creds, to, subject, html_body, cc=None, bcc=None,
                            attachments=None):
-    body = _build_mime(to, subject, html_body, cc=cc, bcc=bcc, attachments=attachments,
-                       in_reply_to=rfc_message_id, references=rfc_message_id, thread_id=thread_id)
+    body = _build_mime(to, subject, html_body, cc=cc, bcc=bcc, attachments=attachments)
     resp = requests.post(
         f"{GMAIL_API_BASE}/messages/send",
         headers=_headers(creds),
