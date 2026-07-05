@@ -50,6 +50,18 @@ def inject_role():
     }
 
 
+@app.context_processor
+def inject_acceptors():
+    try:
+        return {
+            "acceptors": team_status.get_assignable_acceptors()
+        }
+    except Exception:
+        return {
+            "acceptors": []
+        }
+
+
 def current_user():
 
     email = session.get("email")
