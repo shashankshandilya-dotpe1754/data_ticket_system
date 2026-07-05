@@ -6,8 +6,9 @@ itself: registered acceptors, and the team-wide availability/OOO notice.
 import os
 import json
 import datetime
-
+import auth
 import config
+import sheets_utils
 
 REGISTRY_FILE = os.path.join(os.path.dirname(__file__), ".acceptors_registry.json")
 AVAILABILITY_FILE = os.path.join(os.path.dirname(__file__), ".availability_store.json")
@@ -30,9 +31,27 @@ def get_registered_acceptors() -> list:
         return json.load(f)
 
 
-def get_assignable_acceptors() -> list:
+import sheets_utils
+import auth
+
+
+def get_assignable_acceptors(creds=None) -> list:
+    """
+    Always read the latest acceptors from Google Sheet.
+    """
+
+    if creds:
+        try:
+            return sheets_utils.get_acceptors(creds)
+        except Exception:
+            pass
+
     registered = get_registered_acceptors()
-    return registered if registered else list(config.ACCEPTORS)
+
+    if registered:
+        return registered
+
+    return list(config.ACCEPTORS)
 
 
 DEFAULT_AVAILABILITY = {
