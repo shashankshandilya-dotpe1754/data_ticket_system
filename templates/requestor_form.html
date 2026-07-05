@@ -37,7 +37,7 @@
 
   <div class="mb-3">
     <label class="form-label">Description *</label>
-    <div id="editor" style="height:250px; background:white;"></div>
+    <div id="editor"></div>
     <input type="hidden" name="description_html" id="description_html">
   </div>
 
@@ -79,23 +79,83 @@
 <script>
   // Full Gmail-style formatting toolbar: bold/italic/underline/strike,
   // headers, lists, indent, links, images, color, alignment, code-block.
-  const quill = new Quill('#editor', {
-    theme: 'snow',
-    placeholder: 'Describe your data request in as much detail as needed...',
+const quill = new Quill('#editor', {
+
+    theme: "snow",
+
+    placeholder: "Describe your data request in detail...",
+
     modules: {
-      toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ align: [] }],
-        ['blockquote', 'code-block'],
-        ['link', 'image'],
-        ['clean'],
-      ]
+
+        toolbar: [
+
+            [{ font: [] }, { size: ['small', false, 'large', 'huge'] }],
+
+            [{ header: [1,2,3,4,5,6,false] }],
+
+            ['bold','italic','underline','strike'],
+
+            [{ color: [] }, { background: [] }],
+
+            [{ script:'sub' }, { script:'super' }],
+
+            [{ list:'ordered' }, { list:'bullet' }],
+
+            [{ indent:'-1' }, { indent:'+1' }],
+
+            [{ align: [] }],
+
+            ['blockquote','code-block'],
+
+            ['link','image'],
+
+            ['clean']
+
+        ]
+
     }
-  });
+
+});
+
+<style>
+
+.ql-toolbar{
+
+    padding:10px;
+
+}
+
+.ql-toolbar .ql-picker{
+
+    min-width:90px;
+
+}
+
+.ql-container{
+
+    min-height:450px;
+
+    font-size:15px;
+
+}
+
+.ql-editor{
+
+    min-height:420px;
+
+    max-height:700px;
+
+    overflow-y:auto;
+
+    line-height:1.7;
+
+    font-size:15px;
+
+    font-family:Calibri, Arial, sans-serif;
+
+}
+
+</style>
 
   const prioritySel = document.getElementById('priority');
   const reasonInput = document.getElementById('high_priority_reason');
