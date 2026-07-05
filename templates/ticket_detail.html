@@ -1,774 +1,157 @@
 {% extends "base.html" %}
 {% block content %}
-<a href="{{ url_for('dashboard') }}" class="btn btn-link">
-    ← Dashboard
-</a>
-
-<h3>
-    {{ ticket['Ticket ID'] }} — {{ ticket['Subject'] }}
-</h3>
+<a href="{{ url_for('dashboard') }}" class="btn btn-link">← Dashboard</a>
+<h3>{{ ticket['Ticket ID'] }} — {{ ticket['Subject'] }}</h3>
 
 <div class="card mb-3">
-
-    <div class="card-body">
-
-        <p>
-            <b>Requestor:</b>
-            {{ ticket['Requestor Email'] }}
-        </p>
-
-        <p>
-
-            <b>Priority:</b>
-
-            {{ ticket['Priority'] }}
-
-            {% if ticket['High Priority Reason'] %}
-                — {{ ticket['High Priority Reason'] }}
-            {% endif %}
-
-        </p>
-
-        <p>
-
-            <b>Created:</b>
-
-            {{ ticket['Created Date'] }}
-
-            &nbsp;&nbsp;
-
-            <b>Updated:</b>
-
-            {{ ticket['Updated Date'] }}
-
-            &nbsp;&nbsp;
-
-            <b>Closed:</b>
-
-            {{ ticket['Closed Date'] or "—" }}
-
-        </p>
-
-        <p>
-
-            <b>Attachments:</b>
-
-            {{ ticket["Attachment"] or "None" }}
-
-        </p>
-
-        <hr>
-
-        <b>Description</b>
-
-        <div
-            class="border rounded p-3 bg-light mt-2"
-            style="white-space:pre-wrap">
-
-            {{ ticket["Requestor Description"] }}
-
-        </div>
-
-        {% if ticket["Acceptor Description"] %}
-
-        <hr>
-
-        <b>Acceptor Notes</b>
-
-        <div
-            class="border rounded p-3 bg-light mt-2"
-            style="white-space:pre-wrap">
-
-            {{ ticket["Acceptor Description"] }}
-
-        </div>
-
-        {% endif %}
-
-    </div>
-
+  <div class="card-body">
+    <p><b>Requestor:</b> {{ ticket['Requestor Email'] }}</p>
+    <p><b>Priority:</b> {{ ticket['Priority'] }}
+      {% if ticket['High Priority Reason'] %} — {{ ticket['High Priority Reason'] }}{% endif %}</p>
+    <p><b>Created:</b> {{ ticket['Created Date'] }} &nbsp; <b>Updated:</b> {{ ticket['Updated Date'] }}
+       &nbsp; <b>Closed:</b> {{ ticket['Closed Date'] or '—' }}</p>
+    <p><b>Attachments:</b> {{ ticket['Attachment'] or 'None' }}</p>
+    <hr>
+    <b>Description:</b>
+    <!-- Stored as plain text in the Sheet now (see sheets_utils.html_to_plain_text),
+         so this is rendered as text with preserved line breaks, not HTML. -->
+    <div class="border rounded p-3 bg-light" style="white-space:pre-wrap">{{ ticket['Requestor Description'] }}</div>
+    {% if ticket['Acceptor Description'] %}
+    <hr>
+    <b>Acceptor Notes:</b>
+    <div class="border rounded p-3 bg-light" style="white-space:pre-wrap">{{ ticket['Acceptor Description'] }}</div>
+    {% endif %}
+  </div>
 </div>
 
-<form
-    method="POST"
-    enctype="multipart/form-data"
-    id="updateForm"
-    action="{{ url_for('update_ticket',
-                       ticket_id=ticket['Ticket ID']) }}">
-
-<div class="row">
-
+<form method="POST"
+      action="{{ url_for('update_ticket', ticket_id=ticket['Ticket ID']) }}"
+      enctype="multipart/form-data"
+      id="updateForm">
+  <div class="row">
     <div class="col-md-4 mb-3">
-
-        <label class="form-label">
-
-            Status
-
-        </label>
-
-        <select
-            name="status"
-            class="form-select">
-
-            {% for s in statuses %}
-
-            <option
-                value="{{ s }}"
-                {% if ticket["Status"]==s %}selected{% endif %}>
-
-                {{ s }}
-
-            </option>
-
-            {% endfor %}
-
-        </select>
-
+      <label class="form-label">Status</label>
+      <select name="status" class="form-select">
+        {% for s in statuses %}
+          <option value="{{ s }}" {% if ticket['Status']==s %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
     </div>
-
     <div class="col-md-4 mb-3">
-
-        <label class="form-label">
-
-            Assign / Transfer To
-
-        </label>
-
-        <select
-            name="assigned_to"
-            class="form-select">
-
-            <option value="">
-
-                Unassigned
-
-            </option>
-
-            {% for a in acceptors %}
-
-            <option
-                value="{{ a }}"
-                {% if ticket["Assigned To"]==a %}selected{% endif %}>
-
-                {{ a }}
-
-            </option>
-
-            {% endfor %}
-
-        </select>
-
+      <label class="form-label">Assign / Transfer To</label>
+      <select name="assigned_to" class="form-select">
+        <option value="">Unassigned</option>
+        {% for a in acceptors %}
+          <option value="{{ a }}" {% if ticket['Assigned To']==a %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
     </div>
+  </div>
 
-</div>
+  <div class="mb-3">
+    <label class="form-label">Add Note <span class="text-muted">(optional — emailed to requestor in the same thread)</span></label>
+    <div id="noteEditor" style="height:180px; background:white;"></div>
+    <input type="hidden" name="acceptor_description_html" id="acceptor_description_html">
+  </div>
 
-<div class="mb-3">
+  <div class="mb-3">
+    <label class="form-label">Attachments <span class="text-muted">(optional)</span></label>
+    <input type="file" name="attachments" class="form-control" multiple>
+  </div>
 
-<label class="form-label">
+  <button type="submit" class="btn btn-primary">Save &amp; Notify Requestor</button>
+  <hr class="mt-4">
 
-Add Note
-
-<span class="text-muted">
-
-(optional — emailed to requestor in the same thread)
-
-</span>
-
-</label>
-
-<input
-type="hidden"
-id="acceptor_description_html"
-name="acceptor_description_html">
-
-<div id="noteEditor"></div>
-
-</div>
-
-<div class="mb-3">
-
-<label class="form-label">
-
-Attachments
-<span class="text-muted">(optional)</span>
-
-</label>
-
-<input
-type="file"
-name="attachments"
-multiple
-class="form-control">
-
-</div>
-
-<button
-class="btn btn-primary"
-type="submit">
-
-Save & Notify Requestor
-
-</button>
-
-<hr class="mt-5">
-
-<h5>
-
-Transfer Ticket
-
+<h5 class="mt-3">
+    Transfer Ticket
 </h5>
 
 <div class="row">
 
-<div class="col-md-6">
+    <div class="col-md-6">
 
-<label class="form-label">
+        <label class="form-label">
+            Transfer To
+        </label>
 
-Transfer To
+        <select
+            class="form-select"
+            name="transfer_to">
 
-</label>
+            <option value="">
+                -- Select Acceptor --
+            </option>
 
-<select
-class="form-select"
-name="transfer_to">
+            {% for user in acceptors %}
 
-<option value="">
+                {% if user != ticket["Assigned To"] %}
 
--- Select Acceptor --
+                    <option value="{{ user }}">
+                        {{ user }}
+                    </option>
 
-</option>
+                {% endif %}
 
-{% for user in acceptors %}
+            {% endfor %}
 
-{% if user != ticket["Assigned To"] %}
+        </select>
 
-<option value="{{ user }}">
-
-{{ user }}
-
-</option>
-
-{% endif %}
-
-{% endfor %}
-
-</select>
-
-</div>
+    </div>
 
 </div>
 
 <div class="mt-3">
 
-<label class="form-label">
+    <label class="form-label">
+        Transfer Reason
+    </label>
 
-Transfer Reason
-
-</label>
-
-<textarea
-class="form-control"
-rows="3"
-name="transfer_reason"
-placeholder="Reason for transferring this ticket"></textarea>
+    <textarea
+        class="form-control"
+        rows="3"
+        name="transfer_reason"
+        placeholder="Reason for transferring this ticket"></textarea>
 
 </div>
 
 <div class="mt-3">
 
-<button
-class="btn btn-warning"
-type="submit"
-formaction="{{ url_for('transfer_ticket',
-ticket_id=ticket['Ticket ID']) }}">
+    <button
+        type="submit"
+        class="btn btn-warning"
+        formaction="{{ url_for('transfer_ticket', ticket_id=ticket['Ticket ID']) }}"
+        formmethod="POST">
 
-🔄 Transfer Ticket
+        🔄 Transfer Ticket
 
-</button>
+    </button>
 
 </div>
-
-<!-- ===================================================== -->
-<!-- Quill CSS -->
-<!-- ===================================================== -->
-
-<link
-    href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
-    rel="stylesheet">
-
-<style>
-
-#noteEditor{
-
-    background:#fff;
-
-}
-
-.ql-toolbar{
-
-    border-radius:8px 8px 0 0;
-
-    padding:10px;
-
-    background:#fafafa;
-
-}
-
-.ql-container{
-
-    border-radius:0 0 8px 8px;
-
-    min-height:500px;
-
-    font-size:15px;
-
-    font-family:Calibri,Arial,sans-serif;
-
-}
-
-.ql-editor{
-
-    min-height:460px;
-
-    max-height:900px;
-
-    overflow-y:auto;
-
-    line-height:1.7;
-
-    font-size:15px;
-
-    font-family:Calibri,Arial,sans-serif;
-
-    padding:18px;
-
-}
-
-.ql-picker.ql-font{
-
-    width:140px;
-
-}
-
-.ql-picker.ql-size{
-
-    width:90px;
-
-}
-
-</style>
-
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-
-<script>
-
-const Font = Quill.import('formats/font');
-
-Font.whitelist = [
-
-'arial',
-
-'calibri',
-
-'courier',
-
-'georgia',
-
-'tahoma',
-
-'times-new-roman',
-
-'verdana'
-
-];
-
-Quill.register(Font,true);
-
-const Size = Quill.import('attributors/style/size');
-
-Size.whitelist = [
-
-'10px',
-
-'12px',
-
-'14px',
-
-'16px',
-
-'18px',
-
-'22px',
-
-'26px',
-
-'32px'
-
-];
-
-Quill.register(Size,true);
-
-const noteQuill = new Quill(
-
-'#noteEditor',
-
-{
-
-theme:'snow',
-
-placeholder:'Write an update for the requestor...',
-
-modules:{
-
-toolbar:[
-
-[
-{font:Font.whitelist}
-],
-
-[
-{size:Size.whitelist}
-],
-
-[
-{header:[1,2,3,false]}
-],
-
-[
-'bold',
-
-'italic',
-
-'underline',
-
-'strike'
-
-],
-
-[
-{color:[]},
-
-{background:[]}
-],
-
-[
-{script:'sub'},
-
-{script:'super'}
-],
-
-[
-{list:'ordered'},
-
-{list:'bullet'}
-],
-
-[
-{indent:'-1'},
-
-{indent:'+1'}
-],
-
-[
-{align:[]}
-],
-
-[
-'blockquote',
-
-'code-block'
-],
-
-[
-'link',
-
-'image'
-],
-
-[
-'clean'
-]
-
-]
-
-}
-
-}
-
-);
-
 </form>
 
-// =====================================================
-// Auto expand like Gmail
-// =====================================================
-
-function autoGrowEditor() {
-
-    const editor = document.querySelector(".ql-editor");
-
-    editor.style.height = "auto";
-
-    editor.style.height = editor.scrollHeight + "px";
-
-}
-
-noteQuill.on("text-change", function () {
-
-    autoGrowEditor();
-
-});
-
-setTimeout(autoGrowEditor, 300);
-
-
-// =====================================================
-// Keyboard shortcuts
-// =====================================================
-
-noteQuill.keyboard.addBinding({
-
-    key: "B",
-
-    shortKey: true
-
-}, function () {
-
-    noteQuill.format("bold", true);
-
-});
-
-noteQuill.keyboard.addBinding({
-
-    key: "I",
-
-    shortKey: true
-
-}, function () {
-
-    noteQuill.format("italic", true);
-
-});
-
-noteQuill.keyboard.addBinding({
-
-    key: "U",
-
-    shortKey: true
-
-}, function () {
-
-    noteQuill.format("underline", true);
-
-});
-
-
-// =====================================================
-// Preserve HTML before submit
-// =====================================================
-
-document.getElementById("updateForm")
-
-.addEventListener("submit", function () {
-
-    document.getElementById(
-
-        "acceptor_description_html"
-
-    ).value = noteQuill.root.innerHTML;
-
-});
-
-
-// =====================================================
-// Drag & Drop Images
-// =====================================================
-
-const editor = noteQuill.root;
-
-editor.addEventListener("drop", function(e){
-
-    e.preventDefault();
-
-});
-
-editor.addEventListener("dragover", function(e){
-
-    e.preventDefault();
-
-});
-
-
-// =====================================================
-// Paste Image Support
-// =====================================================
-
-editor.addEventListener("paste", function(e){
-
-    const items =
-
-        (e.clipboardData || e.originalEvent.clipboardData).items;
-
-    for (let i=0;i<items.length;i++){
-
-        if(items[i].type.indexOf("image")===0){
-
-            alert(
-
-                "Images are supported through the toolbar upload."
-
-            );
-
-        }
-
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script>
+  const noteQuill = new Quill('#noteEditor', {
+    theme: 'snow',
+    placeholder: 'Add an update for the requestor (optional)...',
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ color: [] }, { background: [] }],
+        [{ list: 'ordered' }, { list: 'bullet' }],
+        [{ indent: '-1' }, { indent: '+1' }],
+        [{ align: [] }],
+        ['blockquote', 'code-block'],
+        ['link', 'image'],
+        ['clean'],
+      ]
     }
-
-});
-
-<style>
-
-/* ===========================
-   Gmail Style Editor
-=========================== */
-
-.ql-toolbar{
-
-    background:#ffffff;
-
-    border:1px solid #dadce0;
-
-    border-radius:10px 10px 0 0;
-
-    padding:12px;
-
-    position:sticky;
-
-    top:0;
-
-    z-index:50;
-
-}
-
-.ql-toolbar button{
-
-    border-radius:6px;
-
-}
-
-.ql-toolbar button:hover{
-
-    background:#f1f3f4;
-
-}
-
-.ql-toolbar .ql-active{
-
-    background:#d2e3fc;
-
-    border-radius:6px;
-
-}
-
-.ql-container{
-
-    border:1px solid #dadce0;
-
-    border-top:none;
-
-    border-radius:0 0 10px 10px;
-
-    background:#fff;
-
-    min-height:500px;
-
-}
-
-.ql-editor{
-
-    font-family:Google Sans, Arial, Helvetica, sans-serif;
-
-    font-size:15px;
-
-    color:#202124;
-
-    line-height:1.8;
-
-    padding:20px;
-
-    min-height:470px;
-
-}
-
-.ql-editor p{
-
-    margin-bottom:10px;
-
-}
-
-.ql-editor img{
-
-    max-width:100%;
-
-    border-radius:8px;
-
-}
-
-.ql-editor blockquote{
-
-    border-left:4px solid #1a73e8;
-
-    padding-left:15px;
-
-    color:#5f6368;
-
-}
-
-.ql-editor pre{
-
-    background:#f8f9fa;
-
-    border-radius:8px;
-
-    padding:12px;
-
-}
-
-.ql-editor table{
-
-    border-collapse:collapse;
-
-}
-
-.ql-editor table td{
-
-    border:1px solid #ddd;
-
-    padding:8px;
-
-}
-
-.card{
-
-    border-radius:12px;
-
-}
-
-.form-control{
-
-    border-radius:8px;
-
-}
-
-.form-select{
-
-    border-radius:8px;
-
-}
-
-.btn{
-
-    border-radius:8px;
-
-}
-
-</style>
+  });
+
+  document.getElementById('updateForm').addEventListener('submit', function () {
+    document.getElementById('acceptor_description_html').value = noteQuill.root.innerHTML;
+  });
+</script>
+{% endblock %}
