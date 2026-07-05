@@ -209,14 +209,14 @@ def transfer_ticket(ticket_id):
 
     old_ticket = sheets_utils.get_ticket(creds, ticket_id)
 
-email = email.lower()
-
-if email != "pradeep.singh1@dotpe.in":
     if old_ticket is None:
         abort(404)
 
-    if old_ticket.get("Assigned To", "").lower() != email:
-        abort(403)
+    email = email.lower()
+
+    if email != "pradeep.singh1@dotpe.in":
+        if old_ticket.get("Assigned To", "").lower() != email:
+            abort(403)
 
     new_assignee = request.form.get("transfer_to", "").strip()
     transfer_reason = request.form.get("transfer_reason", "").strip()
@@ -426,7 +426,7 @@ def new_ticket():
             else high_priority_reason,
             "Status": "Open",
             "Assigned To": assigned_to,
-            "Attachment": ", ".join(attachment_names),
+            "Attachments": ", ".join(attachment_names),
             "Updated Date": now_string,
             "Closed Date": "",
             "Acceptor Description":
