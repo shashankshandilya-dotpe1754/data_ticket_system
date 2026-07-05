@@ -462,6 +462,10 @@ def new_ticket():
     )
 
 
+# ---------------------------------------------------------------------------
+# MY TICKET
+# ---------------------------------------------------------------------------
+
 @app.route("/my-tickets")
 @login_required
 def my_tickets():
@@ -473,13 +477,79 @@ def my_tickets():
         if t.get("Requestor Email") == email
     ]
 
+    # -----------------------------
+    # Read Filters
+    # -----------------------------
     created_date = request.args.get("created_date", "")
     assigned_to = request.args.get("assigned_to", "")
     priority = request.args.get("priority", "")
     status = request.args.get("status", "")
     search = request.args.get("search", "").strip().lower()
 
-    tickets.sort(key=lambda x: x.get("Created Date", ""), reverse=True)
+    # -----------------------------
+    # Apply Filters
+    # -----------------------------
+
+    if created_date:
+        tickets = [
+            t for t in tickets
+            if t.get("Created Date", "").startswith(created_date)
+        ]
+
+    if assigned_to:
+        tickets = [
+            t for t in tickets
+            if t.get("Assigned To", "") == assigned_to
+        ]
+
+    if priority:
+        tickets = [
+            t for t in tickets
+            if t.get("Priority", "") == priority
+        ]
+
+    if status:
+        tickets = [
+            t for t in tickets
+            if t.get("Status", "") == status
+        ]
+
+    # -----------------------------
+    # Global Search
+    # -----------------------------
+
+    if search:
+
+        searchable_columns = [
+
+            "Ticket ID",
+            "Subject",
+            "Parent Ticket ID",
+            "Previous Ticket ID",
+
+        ]
+
+        tickets = [
+
+            t
+
+            for t in tickets
+
+            if any(
+                search in str(t.get(col, "")).lower()
+                for col in searchable_columns
+            )
+
+        ]
+
+    # -----------------------------
+    # Sort
+    # -----------------------------
+
+    tickets.sort(
+        key=lambda x: x.get("Created Date", ""),
+        reverse=True
+    )
 
     return render_template(
         "my_tickets.html",
