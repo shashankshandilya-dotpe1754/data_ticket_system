@@ -473,9 +473,27 @@ def my_tickets():
         if t.get("Requestor Email") == email
     ]
 
+    created_date = request.args.get("created_date", "")
+    assigned_to = request.args.get("assigned_to", "")
+    priority = request.args.get("priority", "")
+    status = request.args.get("status", "")
+    search = request.args.get("search", "").strip().lower()
+
     tickets.sort(key=lambda x: x.get("Created Date", ""), reverse=True)
 
-    return render_template("my_tickets.html", tickets=tickets, email=email)
+    return render_template(
+        "my_tickets.html",
+        tickets=tickets,
+        email=email,
+        acceptors=team_status.get_assignable_acceptors(),
+        priorities=config.PRIORITY_OPTIONS,
+        statuses=config.STATUS_OPTIONS,
+        current_created_date=created_date,
+        current_assignee=assigned_to,
+        current_priority=priority,
+        current_status=status,
+        current_search=search,
+    )
 
 
 # ---------------------------------------------------------------------------
