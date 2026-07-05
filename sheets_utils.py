@@ -178,3 +178,59 @@ def transfer_ticket(creds, old_ticket: dict, new_assignee: str,
 
     append_ticket(creds, new_ticket)
     return new_ticket
+
+
+def get_acceptors(creds):
+    sheet = get_sheet(creds)
+
+    ws = sheet.worksheet("Acceptors")
+
+    values = ws.get_all_values()
+
+    if len(values) <= 1:
+        return []
+
+    return [
+        row[0].strip().lower()
+        for row in values[1:]
+        if row and row[0].strip()
+    ]
+
+
+def add_acceptor(creds, email):
+
+    sheet = get_sheet(creds)
+
+    ws = sheet.worksheet("Acceptors")
+
+    email = email.strip().lower()
+
+    existing = get_acceptors(creds)
+
+    if email in existing:
+        return False
+
+    ws.append_row([email])
+
+    return True
+
+
+def delete_acceptor(creds, email):
+
+    sheet = get_sheet(creds)
+
+    ws = sheet.worksheet("Acceptors")
+
+    email = email.strip().lower()
+
+    values = ws.get_all_values()
+
+    for idx, row in enumerate(values[1:], start=2):
+
+        if row[0].strip().lower() == email:
+
+            ws.delete_rows(idx)
+
+            return True
+
+    return False
