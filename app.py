@@ -169,6 +169,45 @@ def oauth2callback():
         return redirect(url_for("dashboard"))
     return redirect(url_for("my_tickets"))
 
+# ==========================================================
+# Add/Delete User
+# ==========================================================
+
+@app.route("/acceptor/add", methods=["POST"])
+@acceptor_required
+def add_acceptor():
+
+    email, creds = current_user()
+
+    new_email = request.form["email"]
+
+    sheets_utils.add_acceptor(creds, new_email)
+
+    flash("Acceptor added successfully.")
+
+    return redirect(url_for("dashboard"))
+    
+
+@app.route("/acceptor/delete", methods=["POST"])
+@acceptor_required
+def delete_acceptor():
+
+    email, creds = current_user()
+
+    remove_email = request.form["email"]
+
+    if remove_email.lower() == email.lower():
+
+        flash("You cannot delete yourself.")
+
+        return redirect(url_for("dashboard"))
+
+    sheets_utils.delete_acceptor(creds, remove_email)
+
+    flash("Acceptor deleted.")
+
+    return redirect(url_for("dashboard"))
+
 
 # ==========================================================
 # Transfer Ticket
