@@ -192,16 +192,15 @@ def get_acceptors(creds):
 
     values = resp.json().get("values", [])
 
-    if len(values) <= 1:
-        return []
-
     acceptors = []
 
-    for row in values[1:]:
+    for row in values:
 
         if row and row[0].strip():
 
-            acceptors.append(row[0].strip().lower())
+            if row[0].lower() != "email":
+
+                acceptors.append(row[0].strip().lower())
 
     return acceptors
 
