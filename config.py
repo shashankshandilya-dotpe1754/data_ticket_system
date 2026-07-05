@@ -111,6 +111,10 @@ DEFAULT_CC_RULES = {
     "pradeep.singh1@dotpe.in": [],
 }
 
+CONFIDENTIAL_ASSIGNEE = "pradeep.singh1@dotpe.in"
+
+CONFIDENTIAL_TEXT = "Confidential"
+
 
 def default_cc_for_assignee(assignee_email):
     if not assignee_email:
