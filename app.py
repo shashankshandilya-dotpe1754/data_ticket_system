@@ -207,6 +207,11 @@ def transfer_ticket(ticket_id):
 
     email, creds = current_user()
 
+    old_ticket = sheets_utils.get_ticket(creds, ticket_id)
+
+    if old_ticket is None:
+        abort(404)
+
     new_assignee = request.form.get("transfer_to", "").strip()
     transfer_reason = request.form.get("transfer_reason", "").strip()
 
@@ -214,24 +219,32 @@ def transfer_ticket(ticket_id):
         flash("Please select an acceptor.", "danger")
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
-    if new_assignee == email:
-        flash("Ticket is already assigned to you.", "warning")
+    if new_assignee == old_ticket.get("Assigned To"):
+        flash("Ticket is already assigned to this acceptor.", "warning")
         return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
-    success, message = sheets_utils.transfer_ticket(
+    now_string = datetime.datetime.now(config.IST).strftime("%Y-%m-%d %H:%M:%S")
+
+    new_ticket = sheets_utils.transfer_ticket(
         creds=creds,
-        ticket_id=ticket_id,
+        old_ticket=old_ticket,
         new_assignee=new_assignee,
         transfer_by=email,
         transfer_reason=transfer_reason,
+        now_string=now_string,
     )
 
-    flash(message, "success" if success else "danger")
+    flash(
+        f"Ticket transferred successfully. New Ticket ID: {new_ticket['Ticket ID']}",
+        "success",
+    )
 
-    if success:
-        return redirect(url_for("ticket_detail", ticket_id=message))
-
-    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+    return redirect(
+        url_for(
+            "ticket_detail",
+            ticket_id=new_ticket["Ticket ID"],
+        )
+    )
 
 
 # ==========================================================
