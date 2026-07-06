@@ -968,38 +968,48 @@ def update_ticket(ticket_id):
                     "data": file.read(),
                 }
             )
-
-    rfc_message_id = ticket.get("RFC Message Id")
-
-    if rfc_message_id:
-
+    
+    gmail_message_id = gmail_utils.search_ticket_email(
+        creds,
+        ticket_id,
+    )
+    
+    if gmail_message_id:
+        
+        metadata = gmail_utils.get_message_metadata(
+            creds,
+            gmail_message_id,
+        )
+        
         gmail_utils.send_threaded_reply(
-            creds,
+            
+            creds=creds,
+            thread_id=metadata["thread_id"],
+            rfc_message_id=metadata["rfc_message_id"],
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
-            rfc_message_id=rfc_message_id,
             cc=",".join(default_cc) if default_cc else None,
             attachments=attachments,
         )
-
+    
     else:
-
         gmail_utils.send_new_ticket_email(
-            creds,
+            
+            creds=creds,
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
             cc=",".join(default_cc) if default_cc else None,
             attachments=attachments,
         )
-
+        
         flash(
-            "Note: this ticket had no recorded email thread, so the update was sent as a new email rather than a threaded reply.",
+            "Original ticket email not found in your mailbox. Update sent as a new email.",
             "warning",
         )
-
-    flash("Ticket updated successfully.", "success")
+        
+        flash("Ticket updated successfully.", "success")
 
     return redirect(
         url_for(
