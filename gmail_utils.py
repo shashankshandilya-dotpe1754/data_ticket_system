@@ -254,35 +254,56 @@ def get_rfc_message_id(creds, gmail_message_id):
 
 def search_ticket_email(creds, ticket_id):
     """
-    Searches the logged-in user's mailbox for the original ticket email.
+    Search the logged-in user's mailbox for the newest email
+    belonging to this Ticket ID.
 
-    Returns:
-        Gmail Message ID
-        or None
+    Returns Gmail Message ID or None.
     """
 
-    query = f'subject:{ticket_id}'
+    query = f'subject:{ticket_id} newer_than:365d in:anywhere'
 
     resp = requests.get(
         f"{GMAIL_API_BASE}/messages",
         headers=_headers(creds),
         params={
             "q": query,
-            "maxResults": 1,
+            "maxResults": 10,
         },
         timeout=20,
     )
 
     resp.raise_for_status()
 
-    data = resp.json()
-
-    messages = data.get("messages", [])
+    messages = resp.json().get("messages", [])
 
     if not messages:
         return None
 
-    return messages[0]["id"]
+    newest = None
+    newest_time = 0
+
+    for msg in messages:
+
+        detail = requests.get(
+            f"{GMAIL_API_BASE}/messages/{msg['id']}",
+            headers=_headers(creds),
+            params={
+                "format": "minimal"
+            },
+            timeout=20,
+        )
+
+        detail.raise_for_status()
+
+        data = detail.json()
+
+        ts = int(data.get("internalDate", "0"))
+
+        if ts > newest_time:
+            newest_time = ts
+            newest = msg["id"]
+
+    return newest
 
 
 # ==========================================================
