@@ -782,10 +782,16 @@ def ticket_detail(ticket_id):
         assigned_to = ticket.get("Assigned To", "").strip().lower()
         if assigned_to not in ("", email):
             abort(403)
-
+            
+    conversation = sheets_utils.get_conversation(
+        creds,
+        ticket_id,
+    )
+    
     return render_template(
         "ticket_detail.html",
         ticket=ticket,
+        conversation=conversation,
         statuses=config.STATUS_OPTIONS,
         priorities=config.PRIORITY_OPTIONS,
         acceptors=team_status.get_assignable_acceptors(creds),
