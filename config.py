@@ -60,6 +60,12 @@ SHEET_NAME = "Tickets"
 
 SHEET_RANGE = f"{SHEET_NAME}!A:S"
 
+CONVERSATION_SHEET_NAME = "Conversation"
+
+CONVERSATION_SHEET_RANGE = (
+    f"{CONVERSATION_SHEET_NAME}!A:H"
+)
+
 COLUMNS = [
     "Ticket ID",
     "Created Date",
