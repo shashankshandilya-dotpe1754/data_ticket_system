@@ -228,22 +228,51 @@ def transfer_ticket(ticket_id):
 
     email = email.lower()
 
+    # --------------------------------------------------
+    # Permission Check
+    # --------------------------------------------------
     if email != "pradeep.singh1@dotpe.in":
-        if old_ticket.get("Assigned To", "").lower() != email:
+
+        if old_ticket.get("Assigned To", "").strip().lower() != email:
             abort(403)
 
-    new_assignee = request.form.get("transfer_to", "").strip()
+    # --------------------------------------------------
+    # Form Values
+    # --------------------------------------------------
+    new_assignee = request.form.get("transfer_to", "").strip().lower()
     transfer_reason = request.form.get("transfer_reason", "").strip()
 
     if not new_assignee:
+
         flash("Please select an acceptor.", "danger")
-        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
-    if new_assignee == old_ticket.get("Assigned To"):
-        flash("Ticket is already assigned to this acceptor.", "warning")
-        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+        return redirect(
+            url_for(
+                "ticket_detail",
+                ticket_id=ticket_id,
+            )
+        )
 
-    now_string = datetime.datetime.now(config.IST).strftime("%Y-%m-%d %H:%M:%S")
+    if new_assignee == old_ticket.get("Assigned To", "").strip().lower():
+
+        flash(
+            "Ticket is already assigned to this acceptor.",
+            "warning",
+        )
+
+        return redirect(
+            url_for(
+                "ticket_detail",
+                ticket_id=ticket_id,
+            )
+        )
+
+    # --------------------------------------------------
+    # Create New Ticket
+    # --------------------------------------------------
+    now_string = datetime.datetime.now(config.IST).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
 
     new_ticket = sheets_utils.transfer_ticket(
         creds=creds,
@@ -254,17 +283,23 @@ def transfer_ticket(ticket_id):
         now_string=now_string,
     )
 
+    # --------------------------------------------------
+    # Success Message
+    # --------------------------------------------------
     flash(
-        f"Ticket transferred successfully. New Ticket ID: {new_ticket['Ticket ID']}",
+        f"Ticket transferred successfully.<br>"
+        f"<b>New Ticket ID:</b> {new_ticket['Ticket ID']}<br>"
+        f"<b>Assigned To:</b> {new_assignee}",
         "success",
     )
 
-    return redirect(
-        url_for(
-            "ticket_detail",
-            ticket_id=new_ticket["Ticket ID"],
-        )
-    )
+    # --------------------------------------------------
+    # Redirect
+    # --------------------------------------------------
+    # The transferred ticket now belongs to another
+    # acceptor, so redirect back to the dashboard instead
+    # of opening a ticket the current user no longer owns.
+    return redirect(url_for("dashboard"))
 
 
 # ==========================================================
