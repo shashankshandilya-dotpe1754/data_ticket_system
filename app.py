@@ -485,6 +485,20 @@ def new_ticket():
         }
         sheets_utils.append_ticket(creds, ticket)
 
+        sheets_utils.append_conversation_message(
+            creds,
+            {
+                "Ticket ID": ticket_id,
+                "Message Time": now_string,
+                "Sender Email": email,
+                "Sender Name": email.split("@")[0],
+                "Sender Type": "Requestor",
+                "Message": sheets_utils.html_to_plain_text(description_html),
+                "HTML": description_html,
+                "Attachments": ", ".join(attachment_names),
+            },
+        )       
+
         flash(f"Your ticket {ticket_id} has been raised successfully.", "success")
 
         return redirect(url_for("my_tickets"))
@@ -929,6 +943,31 @@ def update_ticket(ticket_id):
         )
 
         email_changes.append("<li>Comment Added</li>")
+
+    
+    # --------------------------------------------------
+    # Save Conversation
+    # --------------------------------------------------
+        
+    if not note_is_empty:
+        
+        sheets_utils.append_conversation_message(
+            creds,
+            {
+                "Ticket ID": ticket_id,
+                "Message Time": now_string,
+                "Sender Email": email,
+                "Sender Name": email.split("@")[0],
+                "Sender Type": "Acceptor",
+                "Message": note_plain,
+                "HTML": acceptor_note_html,
+                "Attachments": ", ".join(
+                    f.filename
+                    for f in request.files.getlist("attachments")
+                    if f.filename
+                ),
+            },
+        )
 
     # --------------------------------------------------
     # Nothing changed
