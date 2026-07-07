@@ -636,7 +636,7 @@ def my_ticket_detail(ticket_id):
     )
 
     return render_template(
-        "ticket_detail.html",
+        "requestor_ticket_detail.html",
         ticket=ticket,
         conversation=conversation,
         statuses=config.STATUS_OPTIONS,
