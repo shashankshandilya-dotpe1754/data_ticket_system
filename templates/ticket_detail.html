@@ -13,45 +13,84 @@
     <p><b>Attachments:</b> {{ ticket['Attachment'] or 'None' }}</p>
     <hr>
     <h5 class="mb-4">
-      Conversation
-    </h5>
-    <div class="conversation-box">
-      {% if conversation %}
-      {% for msg in conversation %}
-      <div class="chat-message {{ msg.sender|lower }}">
-        <div class="chat-avatar">
-          {% if msg.sender == "REQUESTOR" %}
-          👤
-          {% else %}
-          🧑‍💻
-          {% endif %}
-        </div>
-        <div class="chat-content">
-          <div class="chat-bubble">
-            <div class="chat-header">
-              <span class="chat-user">
-                {% if msg.sender == "REQUESTOR" %}
-                {{ ticket["Requestor Email"] }}
-                {% else %}
-                {{ msg.email }}
-                {% endif %}
-              </span>
-              <span class="chat-time">
-                {{ msg.time }}
-              </span>
+    Conversation
+</h5>
+
+<div class="conversation-box">
+
+    {% if conversation %}
+
+        {% for msg in conversation %}
+
+            <div class="chat-message {% if msg['Sender Type'] == 'Requestor' %}requestor{% else %}acceptor{% endif %}">
+
+                <div class="chat-avatar">
+
+                    {% if msg["Sender Type"] == "Requestor" %}
+                        👤
+                    {% else %}
+                        🧑‍💻
+                    {% endif %}
+
+                </div>
+
+                <div class="chat-content">
+
+                    <div class="chat-bubble">
+
+                        <div class="chat-header">
+
+                            <span class="chat-user">
+
+                                {{ msg["Sender Name"] }}
+
+                            </span>
+
+                            <span class="chat-time">
+
+                                {{ msg["Message Time"] }}
+
+                            </span>
+
+                        </div>
+
+                        <div class="chat-text">
+
+                            {% if msg["HTML"] %}
+                                {{ msg["HTML"]|safe }}
+                            {% else %}
+                                <pre style="margin:0;white-space:pre-wrap;">{{ msg["Message"] }}</pre>
+                            {% endif %}
+
+                            {% if msg["Attachments"] %}
+
+                                <div class="mt-2">
+
+                                    📎 {{ msg["Attachments"] }}
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
             </div>
-            <div class="chat-text">
-              {{ msg.message }}
-            </div>
-          </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="alert alert-light">
+
+            No conversation available.
+
         </div>
-      </div>
-      {% endfor %}
-      {% else %}
-      <div class="alert alert-light">
-        No conversation available.
-      </div>
-      {% endif %}
+
+    {% endif %}
 
 </div>
 
