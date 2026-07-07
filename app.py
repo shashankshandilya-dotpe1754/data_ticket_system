@@ -662,9 +662,120 @@ def requestor_reply(ticket_id):
     if ticket["Requestor Email"].lower() != email.lower():
         abort(403)
 
+    reply_html = request.form.get("reply_html", "").strip()
+
+    if reply_html in ("", "<p><br></p>"):
+        flash("Please enter a reply.", "warning")
+        return redirect(
+            url_for(
+                "my_ticket_detail",
+                ticket_id=ticket_id,
+            )
+        )
+
+    now = datetime.datetime.now(config.IST)
+    now_string = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    attachments = []
+    attachment_names = []
+
+    for file in request.files.getlist("attachments"):
+
+        if not file or file.filename == "":
+            continue
+
+        filename = secure_filename(file.filename)
+
+        attachment_names.append(filename)
+
+        attachments.append(
+            {
+                "filename": filename,
+                "data": file.read(),
+            }
+        )
+
+    signature = gmail_utils.get_signature(creds)
+
+    body = f"""
+    <h3>Requestor Reply</h3>
+
+    <p>
+    <b>Ticket ID:</b> {ticket_id}
+    </p>
+
+    <hr>
+
+    {reply_html}
+
+    <br><br>
+
+    {signature}
+    """
+
+    gmail_message_id = gmail_utils.search_ticket_email(
+        creds,
+        ticket_id,
+    )
+
+    if gmail_message_id:
+
+        metadata = gmail_utils.get_message_metadata(
+            creds,
+            gmail_message_id,
+        )
+
+        gmail_utils.send_threaded_reply(
+            creds=creds,
+            thread_id=metadata["thread_id"],
+            rfc_message_id=metadata["rfc_message_id"],
+            to=ticket["Assigned To"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            attachments=attachments,
+        )
+
+    else:
+
+        gmail_utils.send_new_ticket_email(
+            creds=creds,
+            to=ticket["Assigned To"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            attachments=attachments,
+        )
+
+        flash(
+            "Original email not found. Reply sent as a new email.",
+            "warning",
+        )
+
+    sheets_utils.append_conversation_message(
+        creds,
+        {
+            "Ticket ID": ticket_id,
+            "Message Time": now_string,
+            "Sender Email": email,
+            "Sender Name": email.split("@")[0],
+            "Sender Type": "Requestor",
+            "Message": sheets_utils.html_to_plain_text(reply_html),
+            "HTML": reply_html,
+            "Attachments": ", ".join(attachment_names),
+        },
+    )
+
+    sheets_utils.update_ticket_fields(
+        creds,
+        ticket_id,
+        {
+            "Updated Date": now_string,
+        },
+        ticket=ticket,
+    )
+
     flash(
-        "Requester reply feature will be implemented in the next step.",
-        "info",
+        "Reply sent successfully.",
+        "success",
     )
 
     return redirect(
