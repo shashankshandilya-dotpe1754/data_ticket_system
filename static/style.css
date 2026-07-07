@@ -184,26 +184,23 @@ body{
 
 .chat-bubble{
 
-    display:inline-block;
+    display:inline-flex;
+    flex-direction:column;
 
-    width:auto;
-
-    max-width:65%;
-
-    min-width:120px;
+    width:fit-content;
+    max-width:100%;
 
     padding:12px 16px;
 
     border-radius:16px;
 
     word-break:break-word;
-
     overflow-wrap:anywhere;
-
     white-space:pre-wrap;
 
     box-shadow:0 2px 8px rgba(0,0,0,.08);
 
+}
 }
 
 .requestor .chat-bubble{
@@ -219,11 +216,13 @@ body{
 /* Header */
 
 .chat-header{
+
     display:flex;
     justify-content:space-between;
-    align-items:center;
-    gap:20px;
+    gap:15px;
     margin-bottom:8px;
+
+    width:100%;
 }
 
 .chat-user{
@@ -240,10 +239,11 @@ body{
 /* Body */
 
 .chat-text{
+
+    display:block;
     white-space:pre-wrap;
-    line-height:1.6;
-    font-size:14px;
-    display:inline-block;
+    word-break:break-word;
+    overflow-wrap:anywhere;
 }
 
 /* Date Divider */
