@@ -165,21 +165,20 @@
                                 </div>
 
                                 <div class="chat-text">
-
                                     {% if msg["HTML"] %}
+                                    <div class="message-body">
                                         {{ msg["HTML"]|safe }}
+                                    </div>
                                     {% else %}
-                                        <div style="white-space:pre-wrap;">
-                                            {{ msg["Message"] }}
-                                        </div>
+                                    <div class="message-body">
+                                        {{ msg["Message"] }}
+                                    </div>
                                     {% endif %}
-
                                     {% if msg["Attachments"] %}
                                     <div class="mt-3">
                                         📎 {{ msg["Attachments"] }}
                                     </div>
                                     {% endif %}
-
                                 </div>
 
                             </div>
