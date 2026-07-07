@@ -644,6 +644,35 @@ def my_ticket_detail(ticket_id):
         acceptors=team_status.get_assignable_acceptors(creds),
     )
 
+# ---------------------------------------------------------------------------
+# REQUESTOR REPLY
+# ---------------------------------------------------------------------------
+
+@app.route("/requestor-reply/<ticket_id>", methods=["POST"])
+@login_required
+def requestor_reply(ticket_id):
+
+    email, creds = current_user()
+
+    ticket = sheets_utils.get_ticket(creds, ticket_id)
+
+    if ticket is None:
+        abort(404)
+
+    if ticket["Requestor Email"].lower() != email.lower():
+        abort(403)
+
+    flash(
+        "Requester reply feature will be implemented in the next step.",
+        "info",
+    )
+
+    return redirect(
+        url_for(
+            "my_ticket_detail",
+            ticket_id=ticket_id,
+        )
+    )
 
 # ---------------------------------------------------------------------------
 # ACCEPTOR DASHBOARD
