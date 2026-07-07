@@ -515,9 +515,9 @@ def new_ticket():
 # MY TICKET
 # ---------------------------------------------------------------------------
 
-@app.route("/my-tickets")
+@app.route("/my-ticket/<ticket_id>")
 @login_required
-def my_tickets():
+def my_ticket_detail(ticket_id):
 
     email, creds = current_user()
 
