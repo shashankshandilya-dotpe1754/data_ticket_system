@@ -105,3 +105,150 @@ body{
 .alert{
     border-radius:8px;
 }
+
+
+/* ======================================
+   Conversation
+====================================== */
+
+.conversation-box{
+    background:#ffffff;
+    border:1px solid #dee2e6;
+    border-radius:10px;
+    padding:20px;
+    max-height:650px;
+    overflow-y:auto;
+}
+
+.chat-message{
+    display:flex;
+    margin-bottom:18px;
+}
+
+.chat-message.requestor{
+    justify-content:flex-start;
+}
+
+.chat-message.acceptor{
+    justify-content:flex-end;
+}
+
+.chat-bubble{
+    max-width:72%;
+    padding:14px 18px;
+    border-radius:16px;
+    word-break:break-word;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+}
+
+.requestor .chat-bubble{
+    background:#f8f9fa;
+    border:1px solid #dfe3e8;
+}
+
+.acceptor .chat-bubble{
+    background:#d9fdd3;
+    border:1px solid #b7e6b2;
+}
+
+.chat-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:8px;
+}
+
+.chat-user{
+    font-weight:700;
+    font-size:14px;
+}
+
+.chat-time{
+    font-size:12px;
+    color:#6c757d;
+}
+
+.chat-text{
+    white-space:pre-wrap;
+    line-height:1.6;
+    font-size:14px;
+}
+
+.chat-divider{
+    text-align:center;
+    color:#999;
+    font-size:12px;
+    margin:18px 0;
+}
+
+.conversation-title{
+    font-weight:700;
+    font-size:18px;
+    margin-bottom:20px;
+}
+
+.chat-avatar{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin-right:10px;
+    font-size:18px;
+    background:#ececec;
+    flex-shrink:0;
+}
+
+.acceptor .chat-avatar{
+    order:2;
+    margin-left:10px;
+    margin-right:0;
+    background:#d0f0d0;
+}
+
+.requestor .chat-avatar{
+    background:#e9ecef;
+}
+
+.chat-content{
+    display:flex;
+    flex-direction:column;
+}
+
+.acceptor .chat-content{
+    align-items:flex-end;
+}
+
+.requestor .chat-content{
+    align-items:flex-start;
+}
+
+/* ======================================
+   Conversation Scrollbar
+====================================== */
+
+.conversation-box::-webkit-scrollbar{
+    width:8px;
+}
+
+.conversation-box::-webkit-scrollbar-thumb{
+    background:#c7c7c7;
+    border-radius:10px;
+}
+
+.conversation-box::-webkit-scrollbar-track{
+    background:#f5f5f5;
+}
+
+/* ======================================
+   Mobile
+====================================== */
+
+@media (max-width:768px){
+
+    .chat-bubble{
+        max-width:90%;
+    }
+
+}
