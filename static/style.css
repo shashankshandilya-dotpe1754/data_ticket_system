@@ -106,7 +106,6 @@ body{
     border-radius:8px;
 }
 
-
 /* ======================================
    Conversation
 ====================================== */
@@ -120,18 +119,15 @@ body{
     overflow-y:auto;
 }
 
-/* One message */
+/* ===========================
+   One Message
+=========================== */
 
 .chat-message{
-
     display:flex;
-
     align-items:flex-start;
-
     gap:10px;
-
     margin-bottom:18px;
-
 }
 
 .chat-message.requestor{
@@ -142,7 +138,9 @@ body{
     justify-content:flex-end;
 }
 
-/* Avatar */
+/* ===========================
+   Avatar
+=========================== */
 
 .chat-avatar{
     width:40px;
@@ -153,7 +151,6 @@ body{
     justify-content:center;
     font-size:18px;
     flex-shrink:0;
-    background:#ececec;
 }
 
 .requestor .chat-avatar{
@@ -167,54 +164,49 @@ body{
     background:#d9fdd3;
 }
 
-/* Content */
+/* ===========================
+   Content
+=========================== */
 
 .chat-content{
-    display:block;
+    display:inline-flex;
+    flex-direction:column;
     width:auto;
-    max-width:65%;
+    max-width:420px;
 }
+
 .requestor .chat-content{
-   align-items:flex-start;
+    align-items:flex-start;
 }
 
 .acceptor .chat-content{
-   align-items:flex-end;
+    align-items:flex-end;
 }
 
-/* Bubble */
+/* ===========================
+   Bubble
+=========================== */
 
 .chat-bubble{
+    display:inline-flex;
+    flex-direction:column;
 
-    display:inline-block;
-
-    width:fit-content;
-
+    width:auto;
     max-width:420px;
-
-    min-width:0;
-
-    height:auto;
 
     padding:12px 16px;
 
     border-radius:16px;
 
     white-space:pre-wrap;
-
     word-break:break-word;
-
     overflow-wrap:anywhere;
 
-    vertical-align:top;
-
     box-shadow:0 2px 8px rgba(0,0,0,.08);
-
-}
 }
 
 .requestor .chat-bubble{
-    background:#f8f9fa;
+    background:#ffffff;
     border:1px solid #dfe3e8;
 }
 
@@ -223,16 +215,16 @@ body{
     border:1px solid #b7e6b2;
 }
 
-/* Header */
+/* ===========================
+   Header
+=========================== */
 
 .chat-header{
-
     display:flex;
     justify-content:space-between;
+    align-items:center;
     gap:15px;
     margin-bottom:8px;
-
-    width:100%;
 }
 
 .chat-user{
@@ -246,14 +238,17 @@ body{
     white-space:nowrap;
 }
 
-/* Body */
+/* ===========================
+   Body
+=========================== */
 
 .chat-text{
-
     display:block;
+    width:auto;
     white-space:pre-wrap;
     word-break:break-word;
     overflow-wrap:anywhere;
+    line-height:1.6;
 }
 
 .chat-text p{
@@ -272,9 +267,12 @@ body{
 .chat-text img{
     max-width:100%;
     height:auto;
+    border-radius:8px;
 }
 
-/* Date Divider */
+/* ===========================
+   Divider
+=========================== */
 
 .chat-divider{
     text-align:center;
@@ -287,6 +285,19 @@ body{
     font-size:18px;
     font-weight:700;
     margin-bottom:20px;
+}
+
+/* ===========================
+   Mobile
+=========================== */
+
+@media (max-width:768px){
+
+    .chat-content,
+    .chat-bubble{
+        max-width:90%;
+    }
+
 }
 
 /* ======================================
