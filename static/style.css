@@ -246,6 +246,24 @@ body{
     overflow-wrap:anywhere;
 }
 
+.chat-text p{
+    margin:0;
+}
+
+.chat-text div{
+    margin:0;
+}
+
+.chat-text ul,
+.chat-text ol{
+    margin:6px 0 6px 18px;
+}
+
+.chat-text img{
+    max-width:100%;
+    height:auto;
+}
+
 /* Date Divider */
 
 .chat-divider{
