@@ -169,7 +169,9 @@
                                     {% if msg["HTML"] %}
                                         {{ msg["HTML"]|safe }}
                                     {% else %}
-                                        <pre style="margin:0;white-space:pre-wrap;">{{ msg["Message"] }}</pre>
+                                        <div style="white-space:pre-wrap;">
+                                            {{ msg["Message"] }}
+                                        </div>
                                     {% endif %}
 
                                     {% if msg["Attachments"] %}
