@@ -512,12 +512,12 @@ def new_ticket():
 
 
 # ---------------------------------------------------------------------------
-# MY TICKET
+# MY TICKETS
 # ---------------------------------------------------------------------------
 
-@app.route("/my-ticket/<ticket_id>")
+@app.route("/my-tickets")
 @login_required
-def my_ticket_detail(ticket_id):
+def my_tickets():
 
     email, creds = current_user()
 
@@ -529,6 +529,7 @@ def my_ticket_detail(ticket_id):
     # -----------------------------
     # Read Filters
     # -----------------------------
+
     created_date = request.args.get("created_date", "")
     assigned_to = request.args.get("assigned_to", "")
     priority = request.args.get("priority", "")
@@ -564,7 +565,7 @@ def my_ticket_detail(ticket_id):
         ]
 
     # -----------------------------
-    # Global Search
+    # Search
     # -----------------------------
 
     if search:
@@ -591,10 +592,6 @@ def my_ticket_detail(ticket_id):
 
         ]
 
-    # -----------------------------
-    # Sort
-    # -----------------------------
-
     tickets.sort(
         key=lambda x: x.get("Created Date", ""),
         reverse=True
@@ -612,6 +609,36 @@ def my_ticket_detail(ticket_id):
         current_priority=priority,
         current_status=status,
         current_search=search,
+    )
+
+
+# ---------------------------------------------------------------------------
+# REQUESTOR TICKET DETAILS
+# ---------------------------------------------------------------------------
+
+@app.route("/my-ticket/<ticket_id>")
+@login_required
+def my_ticket_detail(ticket_id):
+
+    email, creds = current_user()
+
+    ticket = sheets_utils.get_ticket(creds, ticket_id)
+
+    if ticket is None:
+        abort(404)
+
+    if ticket["Requestor Email"].lower() != email.lower():
+        abort(403)
+
+    conversation = sheets_utils.get_conversation(
+        creds,
+        ticket_id,
+    )
+
+    return render_template(
+        "requestor_ticket_detail.html",
+        ticket=ticket,
+        conversation=conversation,
     )
 
 
