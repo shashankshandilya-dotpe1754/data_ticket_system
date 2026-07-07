@@ -180,7 +180,11 @@
 
     <tr>
 
-        <td>{{ t["Ticket ID"] }}</td>
+        <td>
+            <a href="{{ url_for('my_ticket_detail', ticket_id=t['Ticket ID']) }}">
+                {{ t["Ticket ID"] }}
+            </a>
+        </td>
 
         <td>{{ t["Subject"] }}</td>
 
