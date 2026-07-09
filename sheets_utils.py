@@ -166,14 +166,23 @@ def transfer_ticket(creds, old_ticket: dict, new_assignee: str,
         "Assigned To": new_assignee,
         "Updated Date": now_string,
         "Closed Date": "",
+        
         "Parent Ticket ID": old_ticket.get("Parent Ticket ID") or old_ticket["Ticket ID"],
         "Previous Ticket ID": old_ticket["Ticket ID"],
+        
         "Transfer By": transfer_by,
         "Transfer Date": now_string,
         "Transfer Reason": transfer_reason,
+        
         "Acceptor Description": "",
+        
         "Thread Id": "",
         "RFC Message Id": "",
+        
+        # NEW
+        "CC": old_ticket.get("CC", ""),
+        "BCC": old_ticket.get("BCC", ""),
+    
     })
 
     append_ticket(creds, new_ticket)
