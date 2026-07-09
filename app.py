@@ -957,6 +957,22 @@ def ticket_detail(ticket_id):
         creds,
         ticket_id,
     )
+
+    # Email Suggestions
+    
+    email_suggestions = sheets_utils.get_email_directory(creds)
+    
+    default_cc = [
+        x.strip()
+        for x in ticket.get("CC", "").split(",")
+        if x.strip()
+    ]
+    
+    default_bcc = [
+        x.strip()
+        for x in ticket.get("BCC", "").split(",")
+        if x.strip()
+    ]
     
     return render_template(
         "ticket_detail.html",
@@ -966,6 +982,9 @@ def ticket_detail(ticket_id):
         priorities=config.PRIORITY_OPTIONS,
         acceptors=team_status.get_assignable_acceptors(creds),
         email=email,
+        email_suggestions=email_suggestions,
+        default_cc=default_cc,
+        default_bcc=default_bcc,
     )
 
 
@@ -1043,6 +1062,9 @@ def update_ticket(ticket_id):
     new_status = request.form.get("status", old_status)
     new_assignee = request.form.get("assigned_to", old_assignee)
 
+    cc = ",".join(request.form.getlist("cc"))
+    bcc = ",".join(request.form.getlist("bcc"))
+
     # --------------------------------------------------
     # Auto Pickup
     # --------------------------------------------------
@@ -1050,22 +1072,29 @@ def update_ticket(ticket_id):
     # If ticket is unassigned, automatically assign it
     # to the acceptor who is updating it.
     if old_assignee == "":
-        new_assignee = email
-
+    new_assignee = email
+    
     acceptor_note_html = request.form.get(
         "acceptor_description_html", ""
     ).strip()
-
+    
     note_is_empty = acceptor_note_html in ("", "<p><br></p>")
-
+    
     now = datetime.datetime.now(config.IST)
     now_string = now.strftime("%Y-%m-%d %H:%M:%S")
 
+    # --------------------------------------------------
+    # Ticket Updates
+    # --------------------------------------------------
+    
     updates = {
-        "Updated Date": now_string
+        "Updated Date": now_string,
+        "CC": cc,
+        "BCC": bcc,
     }
-
+    
     email_changes = []
+
 
     # --------------------------------------------------
     # Status
@@ -1239,7 +1268,10 @@ def update_ticket(ticket_id):
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
-            cc=",".join(default_cc) if default_cc else None,
+            
+            cc=cc if cc else None,
+            bcc=bcc if bcc else None,
+            
             attachments=attachments,
         )
     
@@ -1250,10 +1282,12 @@ def update_ticket(ticket_id):
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
-            cc=",".join(default_cc) if default_cc else None,
+            
+            cc=cc if cc else None,
+            bcc=bcc if bcc else None,
+            
             attachments=attachments,
         )
-        
         flash(
             "Original ticket email not found in your mailbox. Update sent as a new email.",
             "warning",
