@@ -482,6 +482,8 @@ def new_ticket():
                 config.CONFIDENTIAL_TEXT if is_confidential else "",
             "Thread Id": sent["thread_id"],
             "RFC Message Id": rfc_message_id,
+            "CC": cc,
+            "BCC": bcc,
         }
         sheets_utils.append_ticket(creds, ticket)
 
@@ -1072,7 +1074,7 @@ def update_ticket(ticket_id):
     # If ticket is unassigned, automatically assign it
     # to the acceptor who is updating it.
     if old_assignee == "":
-    new_assignee = email
+        new_assignee = email
     
     acceptor_note_html = request.form.get(
         "acceptor_description_html", ""
