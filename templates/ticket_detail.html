@@ -549,6 +549,29 @@ const noteQuill = new Quill('#noteEditor', {
 
 });
 
+new TomSelect("#cc", {
+    plugins: ["remove_button"],
+    create: true,
+    persist: false,
+    maxOptions: 100
+});
+
+new TomSelect("#bcc", {
+    plugins: ["remove_button"],
+    create: true,
+    persist: false,
+    maxOptions: 100
+});
+
+document
+    .getElementById("updateForm")
+    .addEventListener("submit", function () {
+
+        document.getElementById(
+            "acceptor_description_html"
+        ).value = noteQuill.root.innerHTML;
+
+    });
 
 document
     .getElementById("updateForm")
