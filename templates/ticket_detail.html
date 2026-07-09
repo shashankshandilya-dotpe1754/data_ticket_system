@@ -309,19 +309,99 @@
 
     <div class="mb-4">
 
+    <label class="form-label fw-bold">
+        Reply
+    </label>
+
+    <div
+        id="noteEditor"
+        style="height:300px;background:white;">
+    </div>
+
+    <input
+        type="hidden"
+        name="acceptor_description_html"
+        id="acceptor_description_html">
+
+</div>
+
+<!-- =========================
+     CC / BCC
+========================= -->
+
+<div class="row mb-4">
+
+    <div class="col-md-6">
+
         <label class="form-label fw-bold">
-
-            Attachments
-
+            CC
         </label>
 
-        <input
-            type="file"
-            name="attachments"
-            class="form-control"
-            multiple>
+        <select
+            id="cc"
+            name="cc"
+            multiple
+            class="form-select">
+
+            {% for email in email_suggestions %}
+
+                <option
+                    value="{{ email }}"
+                    {% if email in default_cc %}selected{% endif %}>
+                    {{ email }}
+                </option>
+
+            {% endfor %}
+
+        </select>
 
     </div>
+
+    <div class="col-md-6">
+
+        <label class="form-label fw-bold">
+            BCC
+        </label>
+
+        <select
+            id="bcc"
+            name="bcc"
+            multiple
+            class="form-select">
+
+            {% for email in email_suggestions %}
+
+                <option
+                    value="{{ email }}"
+                    {% if email in default_bcc %}selected{% endif %}>
+                    {{ email }}
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+</div>
+
+<!-- =========================
+     Attachments
+========================= -->
+
+<div class="mb-4">
+
+    <label class="form-label fw-bold">
+        Attachments
+    </label>
+
+    <input
+        type="file"
+        name="attachments"
+        class="form-control"
+        multiple>
+
+</div>
 
     <div class="d-flex gap-2 mb-4">
 
