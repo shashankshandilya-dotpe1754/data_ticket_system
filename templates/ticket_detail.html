@@ -184,6 +184,7 @@
 
 </div>
 
+<script>
 
 const noteQuill = new Quill('#noteEditor', {
 
@@ -196,27 +197,16 @@ const noteQuill = new Quill('#noteEditor', {
         toolbar: [
 
             [{ font: [] }],
-
             [{ size: ['small', false, 'large', 'huge'] }],
-
             [{ header: [1,2,3,4,5,6,false] }],
-
             ['bold','italic','underline','strike'],
-
             [{ color: [] }, { background: [] }],
-
             [{ script:'sub' }, { script:'super' }],
-
             [{ list:'ordered' }, { list:'bullet' }],
-
             [{ indent:'-1' }, { indent:'+1' }],
-
             [{ align: [] }],
-
             ['blockquote','code-block'],
-
             ['link','image'],
-
             ['clean']
 
         ]
@@ -237,6 +227,7 @@ new TomSelect("#cc", {
     maxOptions:100
 
 });
+
 
 new TomSelect("#bcc", {
 
@@ -261,35 +252,6 @@ document
 
 });
 
+</script>
 
-<div class="chat-text">
-
-    {% if msg["HTML"] %}
-
-        <div class="message-body">
-
-            {{ msg["HTML"]|safe }}
-
-        </div>
-
-    {% else %}
-
-        <div class="message-body">
-
-            {{ msg["Message"] }}
-
-        </div>
-
-    {% endif %}
-
-    {% if msg["Attachments"] %}
-
-        <div class="mt-3">
-
-            📎 {{ msg["Attachments"] }}
-
-        </div>
-
-    {% endif %}
-
-</div>
+{% endblock %}
