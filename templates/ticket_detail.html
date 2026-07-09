@@ -1,10 +1,20 @@
-<!-- Tom Select -->
+<!-- ===========================
+     Tom Select
+=========================== -->
+
 <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+
 <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
 
-<!-- Quill -->
+
+<!-- ===========================
+     Quill
+=========================== -->
+
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
 
 <div class="mb-4">
 
@@ -12,9 +22,8 @@
         Reply
     </label>
 
-    <div
-        id="noteEditor"
-        style="height:300px;background:white;">
+    <div id="noteEditor"
+         style="height:300px;background:white;">
     </div>
 
     <input
@@ -23,6 +32,7 @@
         id="acceptor_description_html">
 
 </div>
+
 
 <div class="row mb-4">
 
@@ -43,7 +53,9 @@
                 <option
                     value="{{ email }}"
                     {% if email in default_cc %}selected{% endif %}>
+
                     {{ email }}
+
                 </option>
 
             {% endfor %}
@@ -69,7 +81,9 @@
                 <option
                     value="{{ email }}"
                     {% if email in default_bcc %}selected{% endif %}>
+
                     {{ email }}
+
                 </option>
 
             {% endfor %}
@@ -116,10 +130,13 @@
 
 </div>
 
+
 <hr class="my-4">
 
 <h4>
+
     🔄 Transfer Ticket
+
 </h4>
 
 <div class="row">
@@ -127,7 +144,9 @@
     <div class="col-md-6 mb-3">
 
         <label class="form-label">
+
             Transfer To
+
         </label>
 
         <select
@@ -159,7 +178,9 @@
 <div class="mb-3">
 
     <label class="form-label">
+
         Transfer Reason
+
     </label>
 
     <textarea
@@ -183,6 +204,7 @@
     </button>
 
 </div>
+
 
 <script>
 
@@ -215,7 +237,6 @@ const noteQuill = new Quill('#noteEditor', {
 
 });
 
-
 new TomSelect("#cc", {
 
     plugins:["remove_button"],
@@ -227,7 +248,6 @@ new TomSelect("#cc", {
     maxOptions:100
 
 });
-
 
 new TomSelect("#bcc", {
 
@@ -241,7 +261,6 @@ new TomSelect("#bcc", {
 
 });
 
-
 document
 .getElementById("updateForm")
 .addEventListener("submit", function () {
@@ -253,5 +272,9 @@ document
 });
 
 </script>
+
+
+</form>
+
 
 {% endblock %}
