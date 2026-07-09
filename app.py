@@ -962,7 +962,7 @@ def ticket_detail(ticket_id):
 
     # Email Suggestions
     
-    email_suggestions = sheets_utils.get_email_directory(creds)
+    email_suggestions = sheets_utils.get_acceptors(creds)
     
     default_cc = [
         x.strip()
