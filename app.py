@@ -420,37 +420,88 @@ def new_ticket():
         # -----------------------------------------
 
         ticket = {
-            "Ticket ID": ticket_id,
-            "Created Date": now_string,
-            
-            "Requestor Email":
-                config.CONFIDENTIAL_TEXT if is_confidential else email,
-            
-            "Subject":
-                config.CONFIDENTIAL_TEXT if is_confidential else subject,
-            
-            "Requestor Description":
-                config.CONFIDENTIAL_TEXT if is_confidential
-                else sheets_utils.html_to_plain_text(description_html),
-            
-            "Priority": priority,
-            
-            "High Priority Reason":
-                config.CONFIDENTIAL_TEXT if is_confidential
-            else high_priority_reason,
-            "Status": "Open",
-            "Assigned To": assigned_to,
-            "Attachments": ", ".join(attachment_names),
-            "Updated Date": now_string,
-            "Closed Date": "",
-            "Acceptor Description":
-                config.CONFIDENTIAL_TEXT if is_confidential else "",
-            "Thread Id": sent["thread_id"],
-            "RFC Message Id": rfc_message_id,
-        }
-        sheets_utils.append_ticket(creds, ticket)
+    "Ticket ID": ticket_id,
+    "Created Date": now_string,
 
-        flash(f"Your ticket {ticket_id} has been raised successfully.", "success")
+    "Requestor Email":
+        config.CONFIDENTIAL_TEXT if is_confidential else email,
+
+    "Subject":
+        config.CONFIDENTIAL_TEXT if is_confidential else subject,
+
+    "Requestor Description":
+        config.CONFIDENTIAL_TEXT if is_confidential
+        else sheets_utils.html_to_plain_text(description_html),
+
+    "Priority": priority,
+
+    "High Priority Reason":
+        config.CONFIDENTIAL_TEXT if is_confidential
+        else high_priority_reason,
+
+    "Status": "Open",
+
+    "Assigned To": assigned_to,
+
+    "Attachments": ", ".join(attachment_names),
+
+    "Updated Date": now_string,
+
+    "Closed Date": "",
+
+    "Acceptor Description":
+        config.CONFIDENTIAL_TEXT if is_confidential else "",
+
+    "Thread Id": sent["thread_id"],
+
+    "RFC Message Id": rfc_message_id,
+        }
+
+sheets_utils.append_ticket(
+    creds,
+    ticket,
+)
+
+# ==========================================================
+# Save First Conversation Message
+# ==========================================================
+
+if not is_confidential:
+
+    sheets_utils.append_conversation_message(
+
+        creds,
+
+        {
+
+            "Ticket ID": ticket_id,
+
+            "Sender Type": "Requestor",
+
+            "Sender Name": email.split("@")[0],
+
+            "Sender Email": email,
+
+            "Message":
+                sheets_utils.html_to_plain_text(description_html),
+
+            "HTML":
+                description_html,
+
+            "Message Time":
+                now_string,
+
+            "Attachments":
+                ", ".join(attachment_names),
+
+        }
+
+    )
+
+flash(
+    f"Your ticket {ticket_id} has been raised successfully.",
+    "success",
+)
 
         return redirect(url_for("my_tickets"))
 
