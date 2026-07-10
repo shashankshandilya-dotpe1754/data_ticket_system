@@ -106,225 +106,388 @@ body{
     border-radius:8px;
 }
 
-/* ======================================
-   Conversation
-====================================== */
+/* ==========================================================
+   Conversation Chat
+========================================================== */
 
 .conversation-box{
-    background:#fff;
-    border:1px solid #dee2e6;
-    border-radius:10px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:18px;
+
     padding:20px;
-    max-height:650px;
+
+    background:#f8f9fc;
+
+    border:1px solid #dee2e6;
+
+    border-radius:12px;
+
+    max-height:700px;
+
     overflow-y:auto;
+
+    scroll-behavior:smooth;
+
 }
 
-/* ===========================
-   One Message
-=========================== */
+/* ==========================================================
+   Message Row
+========================================================== */
 
 .chat-message{
+
     display:flex;
+
+    width:100%;
+
+    gap:12px;
+
     align-items:flex-start;
-    gap:10px;
-    margin-bottom:18px;
+
 }
+
+/* ==========================================================
+   Requestor → Left
+========================================================== */
 
 .chat-message.requestor{
+
+    flex-direction:row;
+
     justify-content:flex-start;
+
 }
+
+/* ==========================================================
+   Acceptor → Right
+========================================================== */
 
 .chat-message.acceptor{
-    justify-content:flex-end;
+
+    flex-direction:row-reverse;
+
+    justify-content:flex-start;
+
 }
 
-/* ===========================
+/* ==========================================================
    Avatar
-=========================== */
+========================================================== */
 
 .chat-avatar{
-    width:40px;
-    height:40px;
+
+    width:44px;
+
+    height:44px;
+
+    min-width:44px;
+
     border-radius:50%;
+
+    background:#ffffff;
+
+    border:1px solid #dcdcdc;
+
     display:flex;
-    align-items:center;
+
     justify-content:center;
-    font-size:18px;
-    flex-shrink:0;
+
+    align-items:center;
+
+    font-size:20px;
+
+    box-shadow:0 1px 3px rgba(0,0,0,.08);
+
 }
 
-.requestor .chat-avatar{
-    margin-right:10px;
-    background:#ececec;
-}
-
-.acceptor .chat-avatar{
-    order:2;
-    margin-left:10px;
-    background:#d9fdd3;
-}
-
-/* ===========================
-   Content
-=========================== */
+/* ==========================================================
+   Bubble Wrapper
+========================================================== */
 
 .chat-content{
-    display:inline-flex;
-    flex-direction:column;
-    width:auto;
-    max-width:420px;
+
+    width:fit-content;
+
+    max-width:78%;
+
 }
 
-.requestor .chat-content{
-    align-items:flex-start;
-}
-
-.acceptor .chat-content{
-    align-items:flex-end;
-}
-
-/* ===========================
+/* ==========================================================
    Bubble
-=========================== */
+========================================================== */
 
 .chat-bubble{
-    display:inline-flex;
-    flex-direction:column;
 
-    width:auto;
-    max-width:420px;
-
-    padding:12px 16px;
+    background:#ffffff;
 
     border-radius:16px;
 
-    white-space:pre-wrap;
-    word-break:break-word;
-    overflow-wrap:anywhere;
+    padding:16px;
 
     box-shadow:0 2px 8px rgba(0,0,0,.08);
+
+    word-break:break-word;
+
+    overflow-wrap:anywhere;
+
+    white-space:normal;
+
 }
 
-.requestor .chat-bubble{
+/* ==========================================================
+   Different Bubble Color
+========================================================== */
+
+.chat-message.requestor .chat-bubble{
+
     background:#ffffff;
-    border:1px solid #dfe3e8;
+
 }
 
-.acceptor .chat-bubble{
-    background:#d9fdd3;
-    border:1px solid #b7e6b2;
+.chat-message.acceptor .chat-bubble{
+
+    background:#dff6ff;
+
 }
 
-/* ===========================
+/* ==========================================================
    Header
-=========================== */
+========================================================== */
 
 .chat-header{
+
     display:flex;
+
     justify-content:space-between;
+
     align-items:center;
-    gap:15px;
-    margin-bottom:8px;
+
+    gap:20px;
+
+    margin-bottom:10px;
+
 }
+
+/* ==========================================================
+   Sender Name
+========================================================== */
 
 .chat-user{
-    font-size:14px;
+
     font-weight:700;
+
+    font-size:15px;
+
 }
+
+/* ==========================================================
+   Time
+========================================================== */
 
 .chat-time{
-    font-size:11px;
+
     color:#777;
+
+    font-size:12px;
+
     white-space:nowrap;
+
 }
 
-/* ===========================
+/* ==========================================================
    Body
-=========================== */
+========================================================== */
 
 .chat-text{
-    display:block;
-    width:auto;
-    white-space:pre-wrap;
-    word-break:break-word;
-    overflow-wrap:anywhere;
-    line-height:1.6;
+
+    line-height:1.7;
+
+    font-size:14px;
+
 }
 
-.chat-text p{
-    margin:0;
+/* ==========================================================
+   Quill HTML
+========================================================== */
+
+.message-body{
+
+    width:100%;
+
 }
 
-.chat-text div{
-    margin:0;
+/* ==========================================================
+   Paragraphs
+========================================================== */
+
+.message-body p{
+
+    margin-bottom:10px;
+
 }
 
-.chat-text ul,
-.chat-text ol{
-    margin:6px 0 6px 18px;
+/* ==========================================================
+   Lists
+========================================================== */
+
+.message-body ul,
+
+.message-body ol{
+
+    margin-left:20px;
+
+    margin-bottom:10px;
+
 }
 
-.chat-text img{
+/* ==========================================================
+   Tables
+========================================================== */
+
+.message-body table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+    margin-top:10px;
+
+    margin-bottom:10px;
+
+}
+
+.message-body th,
+
+.message-body td{
+
+    border:1px solid #dcdcdc;
+
+    padding:8px;
+
+}
+
+/* ==========================================================
+   Images
+========================================================== */
+
+.message-body img{
+
     max-width:100%;
+
     height:auto;
+
     border-radius:8px;
-}
 
-/* ===========================
-   Divider
-=========================== */
-
-.chat-divider{
-    text-align:center;
-    color:#888;
-    font-size:12px;
-    margin:18px 0;
-}
-
-.conversation-title{
-    font-size:18px;
-    font-weight:700;
-    margin-bottom:20px;
-}
-
-/* ===========================
-   Mobile
-=========================== */
-
-@media (max-width:768px){
-
-    .chat-content,
-    .chat-bubble{
-        max-width:90%;
-    }
+    margin-top:10px;
 
 }
 
-/* ======================================
-   Conversation Scrollbar
-====================================== */
+/* ==========================================================
+   Links
+========================================================== */
+
+.message-body a{
+
+    word-break:break-all;
+
+}
+
+/* ==========================================================
+   Code
+========================================================== */
+
+.message-body pre{
+
+    background:#f4f4f4;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    overflow-x:auto;
+
+    white-space:pre-wrap;
+
+    word-break:break-word;
+
+    margin-top:10px;
+
+}
+
+.message-body code{
+
+    background:#f4f4f4;
+
+    padding:2px 5px;
+
+    border-radius:4px;
+
+}
+
+/* ==========================================================
+   Blockquote
+========================================================== */
+
+.message-body blockquote{
+
+    border-left:4px solid #0d6efd;
+
+    padding-left:12px;
+
+    color:#555;
+
+    margin:10px 0;
+
+}
+
+/* ==========================================================
+   Attachments
+========================================================== */
+
+.chat-text .mt-3{
+
+    margin-top:12px;
+
+    padding-top:10px;
+
+    border-top:1px solid #e5e5e5;
+
+    color:#555;
+
+    font-size:13px;
+
+}
+
+/* ==========================================================
+   Scrollbar
+========================================================== */
 
 .conversation-box::-webkit-scrollbar{
-    width:8px;
-}
 
-.conversation-box::-webkit-scrollbar-thumb{
-    background:#c7c7c7;
-    border-radius:10px;
+    width:8px;
+
 }
 
 .conversation-box::-webkit-scrollbar-track{
-    background:#f5f5f5;
+
+    background:#f1f1f1;
+
 }
 
-/* ======================================
-   Mobile
-====================================== */
+.conversation-box::-webkit-scrollbar-thumb{
 
-@media (max-width:768px){
+    background:#c2c2c2;
 
-    .chat-bubble{
-        max-width:90%;
-    }
+    border-radius:20px;
+
+}
+
+.conversation-box::-webkit-scrollbar-thumb:hover{
+
+    background:#999;
 
 }
