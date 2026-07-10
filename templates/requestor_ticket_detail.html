@@ -254,4 +254,131 @@ document
 {% endblock %}
 
 
+<div class="d-flex gap-2">
+
+    <button
+        class="btn btn-primary"
+        type="submit">
+
+        💬 Send Reply
+
+    </button>
+
+</div>
+
+</form>
+
+<!-- ===================================================== -->
+<!-- Tom Select -->
+<!-- ===================================================== -->
+
+<link
+    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
+    rel="stylesheet">
+
+<script
+    src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js">
+</script>
+
+<!-- ===================================================== -->
+<!-- Quill -->
+<!-- ===================================================== -->
+
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
+    rel="stylesheet">
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js">
+</script>
+
+<script>
+
+const quill = new Quill('#replyEditor', {
+
+    theme: 'snow',
+
+    placeholder: 'Reply to the Data Team...',
+
+    modules: {
+
+        toolbar: [
+
+            [{ font: [] }],
+
+            [{ size: ['small', false, 'large', 'huge'] }],
+
+            [{ header: [1,2,3,4,5,6,false] }],
+
+            ['bold','italic','underline','strike'],
+
+            [{ color: [] }, { background: [] }],
+
+            [{ script:'sub' }, { script:'super' }],
+
+            [{ list:'ordered' }, { list:'bullet' }],
+
+            [{ indent:'-1' }, { indent:'+1' }],
+
+            [{ align: [] }],
+
+            ['blockquote','code-block'],
+
+            ['link','image'],
+
+            ['clean']
+
+        ]
+
+    }
+
+});
+
+
+new TomSelect("#cc", {
+
+    plugins: ["remove_button"],
+
+    create: true,
+
+    persist: false,
+
+    maxOptions: 100,
+
+    placeholder: "Add CC recipients..."
+
+});
+
+
+new TomSelect("#bcc", {
+
+    plugins: ["remove_button"],
+
+    create: true,
+
+    persist: false,
+
+    maxOptions: 100,
+
+    placeholder: "Add BCC recipients..."
+
+});
+
+
+document
+.getElementById("replyForm")
+.addEventListener("submit", function () {
+
+    document.getElementById("reply_html").value =
+        quill.root.innerHTML;
+
+});
+
+</script>
+
+{% endblock %}
+
+
+
+
     
