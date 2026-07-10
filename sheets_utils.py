@@ -319,6 +319,32 @@ def delete_acceptor(creds, email):
 
     return True
 
+def get_email_directory(creds):
+    """
+    Returns all email addresses from Email_Directory sheet.
+    """
+
+    resp = requests.get(
+        _values_url(config.EMAIL_DIRECTORY_RANGE),
+        headers=_headers(creds),
+        timeout=20,
+    )
+
+    resp.raise_for_status()
+
+    values = resp.json().get("values", [])
+
+    emails = []
+
+    # Skip header
+    for row in values[1:]:
+
+        if row and row[0].strip():
+
+            emails.append(row[0].strip())
+
+    return sorted(set(emails))
+
 
 # ==========================================================
 # Conversation Functions
