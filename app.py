@@ -465,10 +465,12 @@ def new_ticket():
         )
 
 
-        # ==========================================================
+       # ==========================================================
         # Save First Conversation Message
         # ==========================================================
+
         if not is_confidential:
+
             sheets_utils.append_conversation_message(
                 creds,
                 {
@@ -476,33 +478,30 @@ def new_ticket():
                     "Sender Type": "Requestor",
                     "Sender Name": email.split("@")[0],
                     "Sender Email": email,
-                    "Message":
-                    sheets_utils.html_to_plain_text(description_html),
-                    
-                    "HTML":
-                    description_html,
-                    
-                    "Message Time":
-                    now_string,
-                    
-                    "Attachments":
-                    ", ".join(attachment_names),
+                    "Message": sheets_utils.html_to_plain_text(description_html),
+                    "HTML": description_html,
+                    "Message Time": now_string,
+                    "Attachments": ", ".join(attachment_names),
                 }
             )
-            
-            flash(
-                f"Your ticket {ticket_id} has been raised successfully.",
-                "success",
-            )
 
-            return redirect(url_for("my_tickets"))
-            
-            return render_template(
-                "requestor_form.html",
-                priorities=config.PRIORITY_OPTIONS,
-                form={},
-                banner=banner,
-            )
+        flash(
+            f"Your ticket {ticket_id} has been raised successfully.",
+            "success",
+        )
+
+        return redirect(url_for("my_tickets"))
+
+    # ==========================================================
+    # GET Request
+    # ==========================================================
+
+    return render_template(
+        "requestor_form.html",
+        priorities=config.PRIORITY_OPTIONS,
+        form={},
+        banner=banner,
+    )
 
 
 # ---------------------------------------------------------------------------
