@@ -119,6 +119,22 @@
     }
   });
 
+  // ==========================================================
+// Email Directory
+// ==========================================================
+
+const emailDirectory = [
+
+{% for item in email_directory %}
+
+{
+    email: "{{ item['email'] }}",
+    name: "{{ item['name'] }}"
+},
+
+{% endfor %}
+
+];
   const prioritySel = document.getElementById('priority');
   const reasonInput = document.getElementById('high_priority_reason');
   const reasonMark = document.getElementById('reasonRequiredMark');
@@ -131,7 +147,96 @@
   prioritySel.addEventListener('change', syncReasonRequirement);
   syncReasonRequirement();
 
-  document.getElementById('ticketForm').addEventListener('submit', function (e) {
+  // ==========================================================
+// CC
+// ==========================================================
+
+new TomSelect("#cc", {
+
+    plugins: ["remove_button"],
+
+    valueField: "email",
+
+    labelField: "name",
+
+    searchField: [
+        "name",
+        "email"
+    ],
+
+    maxOptions: 500,
+
+    options: emailDirectory,
+
+    render: {
+
+        option: function(item, escape) {
+
+            return `
+                <div>
+                    <strong>${escape(item.name)}</strong><br>
+                    <small>${escape(item.email)}</small>
+                </div>
+            `;
+
+        },
+
+        item: function(item, escape) {
+
+            return `<div>${escape(item.name)}</div>`;
+
+        }
+
+    }
+
+});
+
+
+// ==========================================================
+// BCC
+// ==========================================================
+
+new TomSelect("#bcc", {
+
+    plugins: ["remove_button"],
+
+    valueField: "email",
+
+    labelField: "name",
+
+    searchField: [
+        "name",
+        "email"
+    ],
+
+    maxOptions: 500,
+
+    options: emailDirectory,
+
+    render: {
+
+        option: function(item, escape) {
+
+            return `
+                <div>
+                    <strong>${escape(item.name)}</strong><br>
+                    <small>${escape(item.email)}</small>
+                </div>
+            `;
+
+        },
+
+        item: function(item, escape) {
+
+            return `<div>${escape(item.name)}</div>`;
+
+        }
+
+    }
+
+});
+  
+  cument.getElementById('ticketForm').addEventListener('submit', function (e) {
     document.getElementById('description_html').value = quill.root.innerHTML;
     if (quill.getText().trim().length === 0) {
       e.preventDefault();
