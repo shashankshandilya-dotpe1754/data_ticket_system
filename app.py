@@ -291,7 +291,7 @@ def home():
     if auth.is_acceptor(email):
         return redirect(url_for("dashboard"))
 
-    return redirect(url_for("my_tickets"))
+    
 
 
 # ---------------------------------------------------------------------------
@@ -331,6 +331,7 @@ def new_ticket():
 
         if priority == "High" and high_priority_reason == "":
             flash("High Priority Reason is mandatory.", "error")
+            
             return render_template(
                 "requestor_form.html",
                 priorities=config.PRIORITY_OPTIONS,
@@ -499,10 +500,10 @@ def new_ticket():
             "success",
         )
         
-        return redirect(url_for("my_tickets"))
+        
         
         return render_template(
-            "requestor_form.html",
+            "my_tickets.html",
             priorities=config.PRIORITY_OPTIONS,
             form={},
             banner=banner,
