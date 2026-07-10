@@ -309,3 +309,125 @@ def delete_acceptor(creds, email):
     resp.raise_for_status()
 
     return True
+
+# ==========================================================
+# Conversation Functions
+# ==========================================================
+
+def _conversation_row(message: dict):
+
+    return [
+
+        message.get(col, "")
+
+        for col in config.CONVERSATION_COLUMNS
+
+    ]
+
+
+def append_conversation_message(creds, message: dict):
+    """
+    Saves one conversation message into the Conversation sheet.
+    """
+
+    row = _conversation_row(message)
+
+    resp = requests.post(
+
+        _values_url(
+            config.CONVERSATION_SHEET_RANGE,
+            ":append",
+        ),
+
+        headers=_headers(creds),
+
+        params={
+            "valueInputOption": "USER_ENTERED",
+            "insertDataOption": "INSERT_ROWS",
+        },
+
+        json={
+            "values": [row]
+        },
+
+        timeout=20,
+
+    )
+
+    resp.raise_for_status()
+
+
+def get_conversation(creds, ticket_id):
+    """
+    Returns all messages for one ticket.
+    """
+
+    resp = requests.get(
+
+        _values_url(
+            config.CONVERSATION_SHEET_RANGE
+        ),
+
+        headers=_headers(creds),
+
+        timeout=20,
+
+    )
+
+    resp.raise_for_status()
+
+    values = resp.json().get("values", [])
+
+    if not values:
+        return []
+
+    conversations = []
+
+    for row in values[1:]:
+
+        row = row + [""] * (
+            len(config.CONVERSATION_COLUMNS) - len(row)
+        )
+
+        item = dict(
+
+            zip(
+                config.CONVERSATION_COLUMNS,
+                row,
+            )
+
+        )
+
+        if item["Ticket ID"] == ticket_id:
+
+            conversations.append(item)
+
+    conversations.sort(
+        key=lambda x: x["Message Time"]
+    )
+
+    return conversations
+
+
+def get_latest_conversation(creds, ticket_id):
+    """
+    Returns latest message or None.
+    """
+
+    conversations = get_conversation(
+        creds,
+        ticket_id,
+    )
+
+    if not conversations:
+        return None
+
+    return conversations[-1]
+
+
+def delete_conversation(creds, ticket_id):
+    """
+    Reserved for future use.
+    """
+
+    pass
