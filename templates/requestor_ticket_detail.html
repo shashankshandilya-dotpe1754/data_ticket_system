@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+
 {% block content %}
 
 <a href="{{ url_for('my_tickets') }}" class="btn btn-link">
@@ -9,243 +10,126 @@
     {{ ticket["Ticket ID"] }} — {{ ticket["Subject"] }}
 </h3>
 
-<div class="card mb-4">
 
-    <div class="card-body">
+<!-- ===================================================== -->
+<!-- Tom Select -->
+<!-- ===================================================== -->
 
-        <div class="row">
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
 
-            <div class="col-md-6">
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
 
-                <p>
-                    <strong>Assigned To</strong><br>
-                    {{ ticket["Assigned To"] or "Unassigned" }}
-                </p>
 
-            </div>
+<!-- ===================================================== -->
+<!-- Quill -->
+<!-- ===================================================== -->
 
-            <div class="col-md-3">
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 
-                <p>
-                    <strong>Priority</strong><br>
+<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
-                    <span class="badge bg-{% if ticket['Priority']=='High' %}danger{% elif ticket['Priority']=='Medium' %}warning text-dark{% else %}secondary{% endif %}">
-                        {{ ticket["Priority"] }}
-                    </span>
+<div class="mb-4">
 
-                </p>
+    <label class="form-label fw-bold">
 
-            </div>
+        Reply
 
-            <div class="col-md-3">
+    </label>
 
-                <p>
-                    <strong>Status</strong><br>
+    <div
+        id="replyEditor"
+        style="height:300px;background:white;">
 
-                    <span class="badge bg-info text-dark">
-                        {{ ticket["Status"] }}
-                    </span>
+    </div>
 
-                </p>
+    <input
+        type="hidden"
+        name="reply_html"
+        id="reply_html">
 
-            </div>
+</div>
 
-        </div>
+<div class="row mb-4">
 
-        {% if ticket["High Priority Reason"] %}
+    <div class="col-md-6">
 
-        <div class="alert alert-warning">
+        <label class="form-label fw-bold">
 
-            <strong>High Priority Reason</strong><br>
+            CC
 
-            {{ ticket["High Priority Reason"] }}
+        </label>
 
-        </div>
+        <select
+            id="cc"
+            name="cc"
+            multiple
+            class="form-select">
 
-        {% endif %}
+            {% for email in email_suggestions %}
 
-        <div class="row mt-3">
+                <option
+                    value="{{ email }}"
+                    {% if email in default_cc %}selected{% endif %}>
 
-            <div class="col-md-4">
+                    {{ email }}
 
-                <small class="text-muted">
+                </option>
 
-                    <strong>Created</strong><br>
+            {% endfor %}
 
-                    {{ ticket["Created Date"] }}
+        </select>
 
-                </small>
+    </div>
 
-            </div>
+    <div class="col-md-6">
 
-            <div class="col-md-4">
+        <label class="form-label fw-bold">
 
-                <small class="text-muted">
+            BCC
 
-                    <strong>Updated</strong><br>
+        </label>
 
-                    {{ ticket["Updated Date"] }}
+        <select
+            id="bcc"
+            name="bcc"
+            multiple
+            class="form-select">
 
-                </small>
+            {% for email in email_suggestions %}
 
-            </div>
+                <option
+                    value="{{ email }}"
+                    {% if email in default_bcc %}selected{% endif %}>
 
-            <div class="col-md-4">
+                    {{ email }}
 
-                <small class="text-muted">
+                </option>
 
-                    <strong>Closed</strong><br>
+            {% endfor %}
 
-                    {{ ticket["Closed Date"] or "—" }}
-
-                </small>
-
-            </div>
-
-        </div>
-
-        {% if ticket["Attachments"] %}
-
-        <hr>
-
-        <p>
-
-            <strong>Attachments</strong><br>
-
-            📎 {{ ticket["Attachments"] }}
-
-        </p>
-
-        {% endif %}
-
-        <hr class="mt-4">
-
-        <h4 class="mb-4">
-
-            💬 Conversation
-
-        </h4>
-
-        <div class="conversation-box">
-
-            {% if conversation %}
-
-                {% for msg in conversation %}
-
-                    <div class="chat-message {% if msg['Sender Type']=='Requestor' %}acceptor{% else %}requestor{% endif %}">
-
-                        <div class="chat-avatar">
-
-                            {% if msg["Sender Type"]=="Requestor" %}
-                                👤
-                            {% else %}
-                                🧑‍💻
-                            {% endif %}
-
-                        </div>
-
-                        <div class="chat-content">
-
-                            <div class="chat-bubble">
-
-                                <div class="chat-header">
-
-                                    <span class="chat-user">
-
-                                        {{ msg["Sender Name"] }}
-
-                                    </span>
-
-                                    <span class="chat-time">
-
-                                        {{ msg["Message Time"] }}
-
-                                    </span>
-
-                                </div>
-
-                                <div class="chat-text message-body">
-                                    {% if msg["HTML"] %}
-                                    <div class="message-body">
-                                        {{ msg["HTML"]|safe }}
-                                    </div>
-                                    {% else %}
-                                    <div class="message-body">
-                                        {{ msg["Message"] }}
-                                    </div>
-                                    {% endif %}
-                                    {% if msg["Attachments"] %}
-                                    <div class="mt-3">
-                                        📎 {{ msg["Attachments"] }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                {% endfor %}
-
-            {% else %}
-
-                <div class="alert alert-light">
-
-                    No conversation available.
-
-                </div>
-
-            {% endif %}
-
-        </div>
+        </select>
 
     </div>
 
 </div>
 
-<form
-    method="POST"
-    action="{{ url_for('requestor_reply', ticket_id=ticket['Ticket ID']) }}"
-    enctype="multipart/form-data"
-    id="replyForm">
+<div class="mb-4">
 
-    <div class="mb-4">
+    <label class="form-label fw-bold">
 
-        <label class="form-label fw-bold">
+        Attachments
 
-            Reply
+    </label>
 
-        </label>
+    <input
+        type="file"
+        name="attachments"
+        class="form-control"
+        multiple>
 
-        <div
-            id="replyEditor"
-            style="height:250px;background:white;">
-        </div>
+</div>
 
-        <input
-            type="hidden"
-            name="reply_html"
-            id="reply_html">
-
-    </div>
-
-    <div class="mb-4">
-
-        <label class="form-label">
-
-            Attachments
-
-        </label>
-
-        <input
-            type="file"
-            name="attachments"
-            class="form-control"
-            multiple>
-
-    </div>
+<div class="d-flex gap-2">
 
     <button
         class="btn btn-primary"
@@ -255,28 +139,62 @@
 
     </button>
 
+</div>
+
 </form>
 
+<!-- ===================================================== -->
+<!-- Tom Select -->
+<!-- ===================================================== -->
+
+<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+
+
+<!-- ===================================================== -->
+<!-- Quill -->
+<!-- ===================================================== -->
+
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+
 
 <script>
 
 const quill = new Quill('#replyEditor', {
 
-    theme:'snow',
+    theme: 'snow',
 
-    placeholder:'Reply to the Data Team...',
+    placeholder: 'Reply to the Data Team...',
 
-    modules:{
+    modules: {
 
-        toolbar:[
+        toolbar: [
 
-            [{header:[1,2,3,false]}],
-            ['bold','italic','underline'],
-            [{color:[]},{background:[]}],
-            [{list:'ordered'},{list:'bullet'}],
+            [{ font: [] }],
+
+            [{ size: ['small', false, 'large', 'huge'] }],
+
+            [{ header: [1,2,3,4,5,6,false] }],
+
+            ['bold','italic','underline','strike'],
+
+            [{ color: [] }, { background: [] }],
+
+            [{ script:'sub' }, { script:'super' }],
+
+            [{ list:'ordered' }, { list:'bullet' }],
+
+            [{ indent:'-1' }, { indent:'+1' }],
+
+            [{ align: [] }],
+
+            ['blockquote','code-block'],
+
             ['link','image'],
+
             ['clean']
 
         ]
@@ -285,7 +203,46 @@ const quill = new Quill('#replyEditor', {
 
 });
 
-document.getElementById("replyForm").addEventListener("submit",function(){
+// =====================================================
+// Tom Select
+// =====================================================
+
+new TomSelect("#cc", {
+
+    plugins: ["remove_button"],
+
+    create: true,
+
+    persist: false,
+
+    maxOptions: 100,
+
+    placeholder: "Add CC recipients..."
+
+});
+
+
+new TomSelect("#bcc", {
+
+    plugins: ["remove_button"],
+
+    create: true,
+
+    persist: false,
+
+    maxOptions: 100,
+
+    placeholder: "Add BCC recipients..."
+
+});
+
+// =====================================================
+// Submit
+// =====================================================
+
+document
+.getElementById("replyForm")
+.addEventListener("submit", function () {
 
     document.getElementById("reply_html").value =
         quill.root.innerHTML;
@@ -295,3 +252,6 @@ document.getElementById("replyForm").addEventListener("submit",function(){
 </script>
 
 {% endblock %}
+
+
+    
