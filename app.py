@@ -637,13 +637,26 @@ def my_ticket_detail(ticket_id):
         ticket_id,
     )
 
+    email_suggestions = sheets_utils.get_email_directory(creds)
+    default_cc = [
+        x.strip()
+        for x in ticket.get("CC", "").split(",")
+        if x.strip()
+    ]
+    
+    default_bcc = [
+        x.strip()
+        for x in ticket.get("BCC", "").split(",")
+        if x.strip()
+    ]
+
     return render_template(
         "requestor_ticket_detail.html",
         ticket=ticket,
         conversation=conversation,
-        statuses=config.STATUS_OPTIONS,
-        priorities=config.PRIORITY_OPTIONS,
-        acceptors=team_status.get_assignable_acceptors(creds),
+        email_suggestions=email_suggestions,
+        default_cc=default_cc,
+        default_bcc=default_bcc,
     )
 
 # ---------------------------------------------------------------------------
@@ -785,6 +798,21 @@ def requestor_reply(ticket_id):
             "my_ticket_detail",
             ticket_id=ticket_id,
         )
+    )
+
+    cc = ",".join(request.form.getlist("cc"))
+    bcc = ",".join(request.form.getlist("bcc"))
+    
+    updates = {
+        "Updated Date": now_string,
+        "CC": cc,
+        "BCC": bcc,
+    }
+    
+    send_threaded_reply(
+        ...
+        cc=cc,
+    bcc=bcc,
     )
 
 # ---------------------------------------------------------------------------
@@ -962,7 +990,7 @@ def ticket_detail(ticket_id):
 
     # Email Suggestions
     
-    email_suggestions = sheets_utils.get_acceptors(creds)
+    email_suggestions = sheets_utils.get_email_directory(creds)
     
     default_cc = [
         x.strip()
@@ -980,13 +1008,25 @@ def ticket_detail(ticket_id):
         "ticket_detail.html",
         ticket=ticket,
         conversation=conversation,
-        statuses=config.STATUS_OPTIONS,
-        priorities=config.PRIORITY_OPTIONS,
-        acceptors=team_status.get_assignable_acceptors(creds),
-        email=email,
+        acceptors=acceptors,
         email_suggestions=email_suggestions,
         default_cc=default_cc,
         default_bcc=default_bcc,
+    )
+
+    cc = ",".join(request.form.getlist("cc"))
+    bcc = ",".join(request.form.getlist("bcc"))
+    
+    updates = {
+        "Updated Date": now_string,
+        "CC": cc,
+        "BCC": bcc,
+    }
+    
+    send_threaded_reply(
+        ...
+        cc=cc,
+    bcc=bcc,
     )
 
 
