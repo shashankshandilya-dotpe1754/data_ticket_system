@@ -143,6 +143,64 @@
     <div id="noteEditor" style="height:180px; background:white;"></div>
     <input type="hidden" name="acceptor_description_html" id="acceptor_description_html">
   </div>
+  
+  <link
+    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
+    rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">
+        CC
+      </label>
+
+        <select
+          id="cc"
+            name="cc"
+            multiple>
+
+            {% for person in email_directory %}
+
+                <option value="{{ person.email }}">
+
+                    {{ person.name }} ({{ person.email }})
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+    <div class="col-md-6">
+
+        <label class="form-label">
+
+            BCC
+
+        </label>
+
+        <select
+            id="bcc"
+            name="bcc"
+            multiple>
+
+            {% for person in email_directory %}
+
+                <option value="{{ person.email }}">
+
+                    {{ person.name }} ({{ person.email }})
+
+                </option>
+
+            {% endfor %}
+
+        </select>
+
+    </div>
+
+</div>
 
   <div class="mb-3">
     <label class="form-label">Attachments <span class="text-muted">(optional)</span></label>
@@ -240,6 +298,34 @@
     }
   });
 
+  new TomSelect("#cc", {
+
+    plugins: ["remove_button"],
+
+    create: false,
+
+    persist: false,
+
+    maxOptions: 1000,
+
+    searchField: ["text"]
+
+});
+
+new TomSelect("#bcc", {
+
+    plugins: ["remove_button"],
+
+    create: false,
+
+    persist: false,
+
+    maxOptions: 1000,
+
+    searchField: ["text"]
+
+});
+  
   document.getElementById('updateForm').addEventListener('submit', function () {
     document.getElementById('acceptor_description_html').value = noteQuill.root.innerHTML;
   });
