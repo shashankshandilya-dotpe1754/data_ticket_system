@@ -298,9 +298,15 @@
     }
   });
 
-  new TomSelect("#cc", {
+ new TomSelect("#cc", {
 
     plugins: ["remove_button"],
+
+    valueField: "value",
+
+    labelField: "text",
+
+    searchField: ["text"],
 
     create: false,
 
@@ -308,7 +314,40 @@
 
     maxOptions: 1000,
 
-    searchField: ["text"]
+    render: {
+
+        option: function(data, escape) {
+
+            let parts = data.text.split(" (");
+
+            let name = parts[0];
+
+            let email = parts.length > 1
+                ? parts[1].replace(")", "")
+                : "";
+
+            return `
+                <div style="padding:8px;">
+                    <div style="font-weight:600;">
+                        ${escape(name)}
+                    </div>
+                    <div style="font-size:12px;color:#666;">
+                        ${escape(email)}
+                    </div>
+                </div>
+            `;
+
+        },
+
+        item: function(data, escape) {
+
+            let name = data.text.split(" (")[0];
+
+            return `<div>${escape(name)}</div>`;
+
+        }
+
+    }
 
 });
 
@@ -316,13 +355,52 @@ new TomSelect("#bcc", {
 
     plugins: ["remove_button"],
 
+    valueField: "value",
+
+    labelField: "text",
+
+    searchField: ["text"],
+
     create: false,
 
     persist: false,
 
     maxOptions: 1000,
 
-    searchField: ["text"]
+    render: {
+
+        option: function(data, escape) {
+
+            let parts = data.text.split(" (");
+
+            let name = parts[0];
+
+            let email = parts.length > 1
+                ? parts[1].replace(")", "")
+                : "";
+
+            return `
+                <div style="padding:8px;">
+                    <div style="font-weight:600;">
+                        ${escape(name)}
+                    </div>
+                    <div style="font-size:12px;color:#666;">
+                        ${escape(email)}
+                    </div>
+                </div>
+            `;
+
+        },
+
+        item: function(data, escape) {
+
+            let name = data.text.split(" (")[0];
+
+            return `<div>${escape(name)}</div>`;
+
+        }
+
+    }
 
 });
   
