@@ -420,131 +420,93 @@ def new_ticket():
         # -----------------------------------------
 
         ticket = {
-    "Ticket ID": ticket_id,
-    "Created Date": now_string,
-
-    "Requestor Email":
-        config.CONFIDENTIAL_TEXT if is_confidential else email,
-
-    "Subject":
-        config.CONFIDENTIAL_TEXT if is_confidential else subject,
-
-    "Requestor Description":
-        config.CONFIDENTIAL_TEXT if is_confidential
-        else sheets_utils.html_to_plain_text(description_html),
-
-    "Priority": priority,
-
-    "High Priority Reason":
-        config.CONFIDENTIAL_TEXT if is_confidential
-        else high_priority_reason,
-
-    "Status": "Open",
-
-    "Assigned To": assigned_to,
-
-    "Attachments": ", ".join(attachment_names),
-
-    "Updated Date": now_string,
-
-    "Closed Date": "",
-
-    "Acceptor Description":
-        config.CONFIDENTIAL_TEXT if is_confidential else "",
-
-    "Thread Id": sent["thread_id"],
-
-    "RFC Message Id": rfc_message_id,
-        }
-
-sheets_utils.append_ticket(
-    creds,
-    ticket,
-)
-
-# ==========================================================
-# Save Initial Conversation
-# ==========================================================
-
-if not is_confidential:
-
-    sheets_utils.append_conversation_message(
-
-        creds,
-
-        {
-
-            "Ticket ID": ticket["Ticket ID"],
-
-            "Sender Type": "Requestor",
-
-            "Sender Name": email.split("@")[0],
-
-            "Sender Email": email,
-
-            "Message": sheets_utils.html_to_plain_text(
-                description_html
-            ),
-
-            "HTML": description_html,
-
-            "Message Time": now_string,
-
-            "Attachments": ", ".join(attachment_names),
-
-        }
-
-    )
-
-# ==========================================================
-# Save First Conversation Message
-# ==========================================================
-
-if not is_confidential:
-
-    sheets_utils.append_conversation_message(
-
-        creds,
-
-        {
-
             "Ticket ID": ticket_id,
-
-            "Sender Type": "Requestor",
-
-            "Sender Name": email.split("@")[0],
-
-            "Sender Email": email,
-
-            "Message":
-                sheets_utils.html_to_plain_text(description_html),
-
-            "HTML":
-                description_html,
-
-            "Message Time":
-                now_string,
-
-            "Attachments":
-                ", ".join(attachment_names),
-
+            "Created Date": now_string,
+            
+            "Requestor Email":
+            config.CONFIDENTIAL_TEXT if is_confidential else email,
+            
+            "Subject":
+            config.CONFIDENTIAL_TEXT if is_confidential else subject,
+            
+            "Requestor Description":
+            config.CONFIDENTIAL_TEXT if is_confidential
+            else sheets_utils.html_to_plain_text(description_html),
+            
+            "Priority": priority,
+            
+            "High Priority Reason":
+            config.CONFIDENTIAL_TEXT if is_confidential
+            else high_priority_reason,
+            
+            "Status": "Open",
+            
+            "Assigned To": assigned_to,
+            
+            "Attachments": ", ".join(attachment_names),
+            
+            "Updated Date": now_string,
+            
+            "Closed Date": "",
+            
+            "Acceptor Description":
+            config.CONFIDENTIAL_TEXT if is_confidential else "",
+            
+            "Thread Id": sent["thread_id"],
+            
+            "RFC Message Id": rfc_message_id,
         }
-
-    )
-
-flash(
-    f"Your ticket {ticket_id} has been raised successfully.",
-    "success",
-)
-
+        
+        sheets_utils.append_ticket(
+            creds,
+            ticket,
+        )
+    
+    
+    # ==========================================================
+    # Save First Conversation Message
+    # ==========================================================
+    
+    if not is_confidential:
+        
+        sheets_utils.append_conversation_message(
+            creds,
+            {
+                "Ticket ID": ticket_id,
+                
+                "Sender Type": "Requestor",
+                
+                "Sender Name": email.split("@")[0],
+                
+                "Sender Email": email,
+                
+                "Message":
+                sheets_utils.html_to_plain_text(description_html),
+                
+                "HTML":
+                description_html,
+                
+                "Message Time":
+                now_string,
+                
+                "Attachments":
+                ", ".join(attachment_names),
+            }
+        )
+        
+        flash(
+            f"Your ticket {ticket_id} has been raised successfully.",
+            "success",
+        )
+        
         return redirect(url_for("my_tickets"))
-
-    return render_template(
-        "requestor_form.html",
-        priorities=config.PRIORITY_OPTIONS,
-        form={},
-        banner=banner,
-    )
+        
+        return render_template(
+            "requestor_form.html",
+            priorities=config.PRIORITY_OPTIONS,
+            form={},
+            banner=banner,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1016,56 +978,44 @@ def update_ticket(ticket_id):
     # --------------------------------------------
     
     if not note_is_empty:
-
-    attachment_names = [
-
-        file["filename"]
-
-        for file in attachments
-
-    ]
-
-    sheets_utils.append_conversation_message(
-
-        creds,
-
-        {
-
-            "Ticket ID": ticket_id,
-
-            "Sender Type": "Acceptor",
-
-            "Sender Name": email.split("@")[0],
-
-            "Sender Email": email,
-
-            "Message":
+        
+        attachment_names = [
+            file["filename"]
+            for file in attachments
+        ]
+        
+        sheets_utils.append_conversation_message(
+            creds,
+            {
+                "Ticket ID": ticket_id,
+                "Sender Type": "Acceptor",
+                "Sender Name": email.split("@")[0],
+                "Sender Email": email,
+                "Message":
                 sheets_utils.html_to_plain_text(
                     acceptor_note_html
                 ),
-
-            "HTML":
+                
+                "HTML":
                 acceptor_note_html,
-
-            "Message Time":
+                
+                "Message Time":
                 now_string,
-
-            "Attachments":
+                
+                "Attachments":
                 ", ".join(attachment_names),
-
-        }
-
-    )
-
-    flash("Ticket updated successfully.", "success")
-
-    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+            }
+        )
+        
+        flash("Ticket updated successfully.", "success")
+        
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
 
 print("\nREGISTERED ROUTES\n")
 for rule in app.url_map.iter_rules():
     print(rule.endpoint,"->",rule.rule)
-print("\nEND ROUTES\n")
+    print("\nEND ROUTES\n")
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
