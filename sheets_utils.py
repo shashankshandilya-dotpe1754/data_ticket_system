@@ -166,23 +166,14 @@ def transfer_ticket(creds, old_ticket: dict, new_assignee: str,
         "Assigned To": new_assignee,
         "Updated Date": now_string,
         "Closed Date": "",
-        
         "Parent Ticket ID": old_ticket.get("Parent Ticket ID") or old_ticket["Ticket ID"],
         "Previous Ticket ID": old_ticket["Ticket ID"],
-        
         "Transfer By": transfer_by,
         "Transfer Date": now_string,
         "Transfer Reason": transfer_reason,
-        
         "Acceptor Description": "",
-        
         "Thread Id": "",
         "RFC Message Id": "",
-        
-        # NEW
-        "CC": old_ticket.get("CC", ""),
-        "BCC": old_ticket.get("BCC", ""),
-    
     })
 
     append_ticket(creds, new_ticket)
@@ -318,146 +309,3 @@ def delete_acceptor(creds, email):
     resp.raise_for_status()
 
     return True
-
-def get_email_directory(creds):
-    """
-    Returns all email addresses from Email_Directory sheet.
-    """
-
-    resp = requests.get(
-        _values_url(config.EMAIL_DIRECTORY_RANGE),
-        headers=_headers(creds),
-        timeout=20,
-    )
-
-    resp.raise_for_status()
-
-    values = resp.json().get("values", [])
-
-    emails = []
-
-    # Skip header
-    for row in values[1:]:
-
-        if row and row[0].strip():
-
-            emails.append(row[0].strip())
-
-    return sorted(set(emails))
-
-
-# ==========================================================
-# Conversation Functions
-# ==========================================================
-
-def _conversation_row(message: dict):
-    return [
-        message.get(col, "")
-        for col in config.CONVERSATION_COLUMNS
-    ]
-
-
-def append_conversation_message(creds, message: dict):
-    """
-    Appends one message to Conversation sheet.
-    """
-
-    row = _conversation_row(message)
-
-    resp = requests.post(
-
-        _values_url(
-            config.CONVERSATION_SHEET_RANGE,
-            ":append",
-        ),
-
-        headers=_headers(creds),
-
-        params={
-            "valueInputOption": "USER_ENTERED",
-            "insertDataOption": "INSERT_ROWS",
-        },
-
-        json={
-            "values": [row]
-        },
-
-        timeout=20,
-    )
-
-    resp.raise_for_status()
-
-
-def get_conversation(creds, ticket_id):
-    """
-    Returns all conversation messages for a ticket.
-    """
-
-    resp = requests.get(
-
-        _values_url(
-            config.CONVERSATION_SHEET_RANGE
-        ),
-
-        headers=_headers(creds),
-
-        timeout=20,
-    )
-
-    resp.raise_for_status()
-
-    values = resp.json().get("values", [])
-
-    if not values:
-        return []
-
-    conversations = []
-
-    for row in values[1:]:
-
-        row = row + [""] * (
-            len(config.CONVERSATION_COLUMNS) - len(row)
-        )
-
-        item = dict(
-            zip(
-                config.CONVERSATION_COLUMNS,
-                row,
-            )
-        )
-
-        if item["Ticket ID"] == ticket_id:
-            conversations.append(item)
-
-    conversations.sort(
-        key=lambda x: x["Message Time"]
-    )
-
-    return conversations
-
-
-def get_latest_conversation(creds, ticket_id):
-    """
-    Returns latest message or None.
-    """
-
-    conversations = get_conversation(
-        creds,
-        ticket_id,
-    )
-
-    if not conversations:
-        return None
-
-    return conversations[-1]
-
-
-def delete_conversation(creds, ticket_id):
-    """
-    Reserved for future use.
-
-    We generally don't delete conversations,
-    but this helper exists for future cleanup.
-    """
-
-    pass
