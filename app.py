@@ -45,19 +45,27 @@ def inject_globals():
 
     email = session.get("email", "").lower()
 
+    creds = auth.credentials_from_dict(
+        session.get("credentials")
+    )
+
     try:
-        acceptors=team_status.get_assignable_acceptors(creds),
+        if creds:
+            acceptors = team_status.get_assignable_acceptors(creds)
+        else:
+            acceptors = []
     except Exception:
         acceptors = []
 
     return {
-
         "is_current_user_acceptor":
             config.is_acceptor_email(email),
 
-        "is_admin": email.lower() in [
-            x.lower() for x in config.MANAGE_ACCESS_USERS
-        ],
+        "is_admin":
+            email in [
+                x.lower()
+                for x in config.MANAGE_ACCESS_USERS
+            ],
 
         "acceptors":
             acceptors,
