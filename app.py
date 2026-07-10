@@ -775,6 +775,13 @@ def ticket_detail(ticket_id):
         ticket_id,
     )
 
+    # ==========================================================
+    # Load Email Directory
+    # ==========================================================
+    email_directory = sheets_utils.get_email_directory(
+        creds
+    )
+
     return render_template(
 
         "ticket_detail.html",
@@ -782,6 +789,8 @@ def ticket_detail(ticket_id):
         ticket=ticket,
 
         conversation=conversation,
+
+        email_directory=email_directory,
 
         statuses=config.STATUS_OPTIONS,
 
