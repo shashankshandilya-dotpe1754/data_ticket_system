@@ -58,13 +58,7 @@ ACCEPTOR_SHEET_ID = 1072795042
 
 SHEET_NAME = "Tickets"
 
-SHEET_RANGE = f"{SHEET_NAME}!A:V"
-
-CONVERSATION_SHEET_NAME = "Conversation"
-
-CONVERSATION_SHEET_RANGE = (
-    f"{CONVERSATION_SHEET_NAME}!A:H"
-)
+SHEET_RANGE = f"{SHEET_NAME}!A:S"
 
 COLUMNS = [
     "Ticket ID",
@@ -89,35 +83,7 @@ COLUMNS = [
     "Acceptor Description",
     "Thread Id",
     "RFC Message Id",
-    "CC",
-    "BCC",
 ]
-
-# ==========================================================
-# Conversation Sheet
-# ==========================================================
-
-CONVERSATION_SHEET_NAME = "Conversation"
-
-CONVERSATION_SHEET_RANGE = f"{CONVERSATION_SHEET_NAME}!A:H"
-
-CONVERSATION_COLUMNS = [
-    "Ticket ID",
-    "Sender",
-    "Email",
-    "Message",
-    "Message HTML",
-    "Message Time",
-    "Attachments",
-    "Message Type",
-]
-
-# ==========================================================
-# Email Directory
-# ==========================================================
-
-EMAIL_DIRECTORY_SHEET = "Email_Directory"
-EMAIL_DIRECTORY_RANGE = f"{EMAIL_DIRECTORY_SHEET}!A:B"
 
 # ==========================================================
 # TEAM MEMBERS
