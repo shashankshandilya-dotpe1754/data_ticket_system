@@ -463,6 +463,40 @@ sheets_utils.append_ticket(
 )
 
 # ==========================================================
+# Save Initial Conversation
+# ==========================================================
+
+if not is_confidential:
+
+    sheets_utils.append_conversation_message(
+
+        creds,
+
+        {
+
+            "Ticket ID": ticket["Ticket ID"],
+
+            "Sender Type": "Requestor",
+
+            "Sender Name": email.split("@")[0],
+
+            "Sender Email": email,
+
+            "Message": sheets_utils.html_to_plain_text(
+                description_html
+            ),
+
+            "HTML": description_html,
+
+            "Message Time": now_string,
+
+            "Attachments": ", ".join(attachment_names),
+
+        }
+
+    )
+
+# ==========================================================
 # Save First Conversation Message
 # ==========================================================
 
