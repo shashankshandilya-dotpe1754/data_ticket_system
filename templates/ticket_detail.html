@@ -2,33 +2,294 @@
 
 {% block content %}
 
+<!-- ===================================================== -->
+<!-- Tom Select -->
+<!-- ===================================================== -->
 
-<!-- ===========================
-     Tom Select
-=========================== -->
+<link
+    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
+    rel="stylesheet">
 
-<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+<script
+    src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js">
+</script>
 
-<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<!-- ===================================================== -->
+<!-- Quill Editor -->
+<!-- ===================================================== -->
+
+<link
+    href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
+    rel="stylesheet">
+
+<script
+    src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js">
+</script>
+
+<div class="container mt-4">
+
+    <div class="card shadow-sm">
+
+        <div class="card-header">
+
+            <h3 class="mb-0">
+
+                Ticket {{ ticket["Ticket ID"] }}
+
+            </h3>
+
+        </div>
+
+        <div class="card-body">
+
+<div class="row">
+
+    <div class="col-md-6">
+
+        <p>
+            <strong>Subject:</strong>
+            {{ ticket["Subject"] }}
+        </p>
+
+        <p>
+            <strong>Requester:</strong>
+            {{ ticket["Requestor Email"] }}
+        </p>
+
+        <p>
+            <strong>Priority:</strong>
+            {{ ticket["Priority"] }}
+        </p>
+
+    </div>
+
+    <div class="col-md-6">
+
+        <p>
+            <strong>Status:</strong>
+            {{ ticket["Status"] }}
+        </p>
+
+        <p>
+            <strong>Assigned To:</strong>
+            {{ ticket["Assigned To"] }}
+        </p>
+
+        <p>
+            <strong>Created:</strong>
+            {{ ticket["Created Date"] }}
+        </p>
+
+    </div>
+
+</div>
+
+<hr>
 
 
-<!-- ===========================
-     Quill
-=========================== -->
+<!-- ===================================================== -->
+<!-- Original Request -->
+<!-- ===================================================== -->
 
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<div class="card mb-4">
 
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <div class="card-header">
 
+        <strong>
+            Original Request
+        </strong>
+
+    </div>
+
+    <div class="card-body">
+
+        {% if ticket["Requestor Description"] %}
+
+            {{ ticket["Requestor Description"]|safe }}
+
+        {% else %}
+
+            <span class="text-muted">
+
+                No description provided.
+
+            </span>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- Conversation -->
+<!-- ===================================================== -->
+
+<div class="card mb-4">
+
+    <div class="card-header">
+
+        <strong>
+
+            Conversation
+
+        </strong>
+
+    </div>
+
+    <div class="card-body"
+         style="max-height:500px;overflow-y:auto;">
+
+        {% if conversations %}
+
+            {% for msg in conversations %}
+
+            <div class="mb-4">
+
+                <div class="small text-muted">
+
+                    <strong>
+
+                        {{ msg["Sender"] }}
+
+                    </strong>
+
+                    •
+
+                    {{ msg["Message Time"] }}
+
+                </div>
+
+                <div class="border rounded p-3 bg-light mt-2">
+
+                    {% if msg["Message HTML"] %}
+
+                        {{ msg["Message HTML"]|safe }}
+
+                    {% else %}
+
+                        {{ msg["Message"] }}
+
+                    {% endif %}
+
+                    {% if msg["Attachments"] %}
+
+                        <div class="mt-2">
+
+                            📎 {{ msg["Attachments"] }}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="text-muted">
+
+                No conversation yet.
+
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<!-- ===================================================== -->
+<!-- Update Ticket -->
+<!-- ===================================================== -->
+
+<form
+    id="updateForm"
+    method="POST"
+    enctype="multipart/form-data">
+
+    <div class="row mb-4">
+
+        <div class="col-md-6">
+
+            <label class="form-label fw-bold">
+
+                Status
+
+            </label>
+
+            <select
+                name="status"
+                class="form-select">
+
+                {% for status in status_options %}
+
+                    <option
+                        value="{{ status }}"
+                        {% if ticket["Status"] == status %}selected{% endif %}>
+
+                        {{ status }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+        <div class="col-md-6">
+
+            <label class="form-label fw-bold">
+
+                Assign To
+
+            </label>
+
+            <select
+                name="assigned_to"
+                class="form-select">
+
+                {% for user in acceptors %}
+
+                    <option
+                        value="{{ user }}"
+                        {% if ticket["Assigned To"] == user %}selected{% endif %}>
+
+                        {{ user }}
+
+                    </option>
+
+                {% endfor %}
+
+            </select>
+
+        </div>
+
+    </div>
+
+
+<!-- ===================================================== -->
+<!-- Reply Editor -->
+<!-- ===================================================== -->
 
 <div class="mb-4">
 
     <label class="form-label fw-bold">
+
         Reply
+
     </label>
 
-    <div id="noteEditor"
-         style="height:300px;background:white;">
+    <div
+        id="noteEditor"
+        style="height:300px;background:white;">
+
     </div>
 
     <input
@@ -39,12 +300,18 @@
 </div>
 
 
+<!-- ===================================================== -->
+<!-- CC / BCC -->
+<!-- ===================================================== -->
+
 <div class="row mb-4">
 
     <div class="col-md-6">
 
         <label class="form-label fw-bold">
+
             CC
+
         </label>
 
         <select
@@ -72,7 +339,9 @@
     <div class="col-md-6">
 
         <label class="form-label fw-bold">
+
             BCC
+
         </label>
 
         <select
@@ -100,10 +369,16 @@
 </div>
 
 
+<!-- ===================================================== -->
+<!-- Attachments -->
+<!-- ===================================================== -->
+
 <div class="mb-4">
 
     <label class="form-label fw-bold">
+
         Attachments
+
     </label>
 
     <input
@@ -114,6 +389,10 @@
 
 </div>
 
+
+<!-- ===================================================== -->
+<!-- Save / Cancel -->
+<!-- ===================================================== -->
 
 <div class="d-flex gap-2 mb-4">
 
@@ -135,6 +414,10 @@
 
 </div>
 
+
+<!-- ===================================================== -->
+<!-- Transfer Ticket -->
+<!-- ===================================================== -->
 
 <hr class="my-4">
 
@@ -159,7 +442,9 @@
             name="transfer_to">
 
             <option value="">
+
                 -- Select Acceptor --
+
             </option>
 
             {% for user in acceptors %}
@@ -167,7 +452,9 @@
                 {% if user != ticket["Assigned To"] %}
 
                     <option value="{{ user }}">
+
                         {{ user }}
+
                     </option>
 
                 {% endif %}
@@ -179,6 +466,11 @@
     </div>
 
 </div>
+
+
+<!-- ===================================================== -->
+<!-- Transfer Reason -->
+<!-- ===================================================== -->
 
 <div class="mb-3">
 
@@ -210,6 +502,9 @@
 
 </div>
 
+<!-- ===================================================== -->
+<!-- JavaScript -->
+<!-- ===================================================== -->
 
 <script>
 
@@ -242,44 +537,57 @@ const noteQuill = new Quill('#noteEditor', {
 
 });
 
+// =====================================================
+// Tom Select
+// =====================================================
+
 new TomSelect("#cc", {
 
-    plugins:["remove_button"],
+    plugins: ["remove_button"],
 
-    create:true,
+    create: true,
 
-    persist:false,
+    persist: false,
 
-    maxOptions:100
+    maxOptions: 100,
+
+    placeholder: "Add CC recipients..."
 
 });
+
 
 new TomSelect("#bcc", {
 
-    plugins:["remove_button"],
+    plugins: ["remove_button"],
 
-    create:true,
+    create: true,
 
-    persist:false,
+    persist: false,
 
-    maxOptions:100
+    maxOptions: 100,
+
+    placeholder: "Add BCC recipients..."
 
 });
+
+
+// =====================================================
+// Submit Form
+// =====================================================
 
 document
-.getElementById("updateForm")
-.addEventListener("submit", function () {
+    .getElementById("updateForm")
+    .addEventListener("submit", function () {
 
-    document.getElementById(
-        "acceptor_description_html"
-    ).value = noteQuill.root.innerHTML;
+        document.getElementById(
+            "acceptor_description_html"
+        ).value = noteQuill.root.innerHTML;
 
-});
+    });
+
 
 </script>
 
-
 </form>
-
 
 {% endblock %}
