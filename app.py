@@ -793,24 +793,47 @@ def ticket_detail(ticket_id):
 
     email, creds = current_user()
 
-    ticket = sheets_utils.get_ticket(creds, ticket_id)
+    ticket = sheets_utils.get_ticket(
+        creds,
+        ticket_id,
+    )
 
     if ticket is None:
         abort(404)
-        
+
     email = email.lower()
-    
+
     if email != "pradeep.singh1@dotpe.in":
+
         if ticket.get("Assigned To", "").lower() != email:
+
             abort(403)
 
+    # ==========================================================
+    # Load Conversation
+    # ==========================================================
+
+    conversation = sheets_utils.get_conversation(
+        creds,
+        ticket_id,
+    )
+
     return render_template(
+
         "ticket_detail.html",
+
         ticket=ticket,
+
+        conversation=conversation,
+
         statuses=config.STATUS_OPTIONS,
+
         priorities=config.PRIORITY_OPTIONS,
+
         acceptors=team_status.get_assignable_acceptors(creds),
+
         email=email,
+
     )
 
 
@@ -993,10 +1016,14 @@ def update_ticket(ticket_id):
     # --------------------------------------------
     
     if not note_is_empty:
-        attachment_names = [
-            file["filename"]
-            for file in attachments
-        ]
+
+    attachment_names = [
+
+        file["filename"]
+
+        for file in attachments
+
+    ]
 
     sheets_utils.append_conversation_message(
 
