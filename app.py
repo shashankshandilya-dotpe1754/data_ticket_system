@@ -289,7 +289,7 @@ def home():
         return render_template("login.html")
 
     if auth.is_acceptor(email):
-        return redirect(url_for("dashboard"))
+        return redirect(url_for("my_ticket"))
 
     
 
@@ -331,6 +331,8 @@ def new_ticket():
 
         if priority == "High" and high_priority_reason == "":
             flash("High Priority Reason is mandatory.", "error")
+            
+            return redirect(url_for("my_tickets"))
             
             return render_template(
                 "requestor_form.html",
@@ -503,7 +505,7 @@ def new_ticket():
         
         
         return render_template(
-            "my_tickets.html",
+            "my_tickets",
             priorities=config.PRIORITY_OPTIONS,
             form={},
             banner=banner,
@@ -1014,9 +1016,11 @@ def update_ticket(ticket_id):
 
 
 print("\nREGISTERED ROUTES\n")
+
 for rule in app.url_map.iter_rules():
-    print(rule.endpoint,"->",rule.rule)
-    print("\nEND ROUTES\n")
+    print(rule.endpoint, "->", rule.rule)
+
+print("\nEND ROUTES\n")
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
