@@ -43,12 +43,29 @@
 
   <div class="row">
     <div class="col-md-6 mb-3">
-      <label class="form-label">CC <span class="text-muted">(optional)</span></label>
-      <input type="text" name="cc" class="form-control" placeholder="comma-separated emails">
+      <label class="form-label">
+        CC
+        <span class="text-muted">(optional)</span>
+      </label>
+      
+      <select
+        id="cc"
+        name="cc"
+        multiple>
+      </select>
     </div>
     <div class="col-md-6 mb-3">
-      <label class="form-label">BCC <span class="text-muted">(optional)</span></label>
-      <input type="text" name="bcc" class="form-control" placeholder="comma-separated emails">
+      <label class="form-label">
+        BCC
+        <span class="text-muted">(optional)</span>
+      </label>
+      
+      <select
+        id="bcc"
+        name="bcc"
+        multiple>
+      </select>
+    
     </div>
   </div>
 
@@ -75,7 +92,12 @@
 </form>
 
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
+<link
+    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
+    rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
 <script>
   // Full Gmail-style formatting toolbar: bold/italic/underline/strike,
   // headers, lists, indent, links, images, color, alignment, code-block.
