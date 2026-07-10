@@ -91,88 +91,93 @@
   <button type="submit" class="btn btn-primary">Submit Ticket</button>
 </form>
 
+<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+
 <link
     href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css"
     rel="stylesheet">
 
-<link
-    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
-    rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
 <script>
-  // Full Gmail-style formatting toolbar: bold/italic/underline/strike,
-  // headers, lists, indent, links, images, color, alignment, code-block.
-  const quill = new Quill('#editor', {
+
+const quill = new Quill('#editor', {
     theme: 'snow',
     placeholder: 'Describe your data request in as much detail as needed...',
     modules: {
-      toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ align: [] }],
-        ['blockquote', 'code-block'],
-        ['link', 'image'],
-        ['clean'],
-      ]
+        toolbar: [
+            [{ header: [1,2,3,false] }],
+            ['bold','italic','underline','strike'],
+            [{ color: [] }, { background: [] }],
+            [{ list:'ordered' }, { list:'bullet' }],
+            [{ indent:'-1' }, { indent:'+1' }],
+            [{ align: [] }],
+            ['blockquote','code-block'],
+            ['link','image'],
+            ['clean']
+        ]
     }
-  });
+});
 
-  // ==========================================================
+// ==========================================
 // Email Directory
-// ==========================================================
+// ==========================================
 
 const emailDirectory = [
 
 {% for item in email_directory %}
-
 {
     email: "{{ item['email'] }}",
     name: "{{ item['name'] }}"
 },
-
 {% endfor %}
 
 ];
-  const prioritySel = document.getElementById('priority');
-  const reasonInput = document.getElementById('high_priority_reason');
-  const reasonMark = document.getElementById('reasonRequiredMark');
 
-  function syncReasonRequirement() {
-    const isHigh = prioritySel.value === 'High';
+// ==========================================
+// Priority Validation
+// ==========================================
+
+const prioritySel = document.getElementById("priority");
+const reasonInput = document.getElementById("high_priority_reason");
+const reasonMark = document.getElementById("reasonRequiredMark");
+
+function syncReasonRequirement(){
+
+    const isHigh = prioritySel.value === "High";
+
     reasonInput.required = isHigh;
-    reasonMark.classList.toggle('d-none', !isHigh);
-  }
-  prioritySel.addEventListener('change', syncReasonRequirement);
-  syncReasonRequirement();
 
-  // ==========================================================
+    reasonMark.classList.toggle("d-none", !isHigh);
+
+}
+
+prioritySel.addEventListener("change", syncReasonRequirement);
+
+syncReasonRequirement();
+
+// ==========================================
 // CC
-// ==========================================================
+// ==========================================
 
-new TomSelect("#cc", {
+new TomSelect("#cc",{
 
-    plugins: ["remove_button"],
+    plugins:["remove_button"],
 
-    valueField: "email",
+    valueField:"email",
 
-    labelField: "name",
+    labelField:"name",
 
-    searchField: [
-        "name",
-        "email"
-    ],
+    searchField:["name","email"],
 
-    maxOptions: 500,
+    options:emailDirectory,
 
-    options: emailDirectory,
+    maxOptions:500,
 
-    render: {
+    render:{
 
-        option: function(item, escape) {
+        option:function(item,escape){
 
             return `
                 <div>
@@ -183,9 +188,16 @@ new TomSelect("#cc", {
 
         },
 
-        item: function(item, escape) {
+        item:function(item,escape){
 
-            return `<div>${escape(item.name)}</div>`;
+            return `
+                <div>
+                    ${escape(item.name)}
+                    <small class="text-muted">
+                        (${escape(item.email)})
+                    </small>
+                </div>
+            `;
 
         }
 
@@ -193,31 +205,27 @@ new TomSelect("#cc", {
 
 });
 
-
-// ==========================================================
+// ==========================================
 // BCC
-// ==========================================================
+// ==========================================
 
-new TomSelect("#bcc", {
+new TomSelect("#bcc",{
 
-    plugins: ["remove_button"],
+    plugins:["remove_button"],
 
-    valueField: "email",
+    valueField:"email",
 
-    labelField: "name",
+    labelField:"name",
 
-    searchField: [
-        "name",
-        "email"
-    ],
+    searchField:["name","email"],
 
-    maxOptions: 500,
+    options:emailDirectory,
 
-    options: emailDirectory,
+    maxOptions:500,
 
-    render: {
+    render:{
 
-        option: function(item, escape) {
+        option:function(item,escape){
 
             return `
                 <div>
@@ -228,25 +236,31 @@ new TomSelect("#bcc", {
 
         },
 
-        item: function(item, escape){
-          return `
-          <div>
-            ${escape(item.name)}
-            <small class="text-muted">
-                (${escape(item.email)})
-            </small>
-        </div>
-    `;
+        item:function(item,escape){
 
-}
+            return `
+                <div>
+                    ${escape(item.name)}
+                    <small class="text-muted">
+                        (${escape(item.email)})
+                    </small>
+                </div>
+            `;
+
+        }
 
     }
 
 });
-  
-  document.getElementById('ticketForm').addEventListener('submit', function(e){
+
+// ==========================================
+// Submit
+// ==========================================
+
+document.getElementById("ticketForm").addEventListener("submit",function(e){
+
     document.getElementById("description_html").value =
-      quill.root.innerHTML;
+        quill.root.innerHTML;
 
     if(quill.getText().trim().length===0){
 
@@ -257,3 +271,7 @@ new TomSelect("#bcc", {
     }
 
 });
+
+</script>
+
+{% endblock %}
