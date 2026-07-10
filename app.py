@@ -855,6 +855,9 @@ def update_ticket(ticket_id):
     new_status = request.form.get("status", old_status)
     new_assignee = request.form.get("assigned_to", old_assignee)
 
+    selected_cc = request.form.getlist("cc")
+    selected_bcc = request.form.getlist("bcc")
+
     acceptor_note_html = request.form.get("acceptor_description_html", "").strip()
 
     # Quill's "empty" state is literally "<p><br></p>", not "".
@@ -942,6 +945,13 @@ def update_ticket(ticket_id):
     """
 
     default_cc = config.default_cc_for_assignee(new_assignee)
+    if selected_cc:
+        cc_list = selected_cc
+    else:
+        cc_list = default_cc
+    
+    bcc_list = selected_bcc
+    
 
     attachments = []
     for file in request.files.getlist("attachments"):
@@ -957,7 +967,8 @@ def update_ticket(ticket_id):
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
             rfc_message_id=rfc_message_id,
-            cc=",".join(default_cc) if default_cc else None,
+            cc=",".join(cc_list) if cc_list else None,
+            bcc=",".join(bcc_list) if bcc_list else None,
             attachments=attachments,
         )
     else:
@@ -968,7 +979,8 @@ def update_ticket(ticket_id):
             to=ticket["Requestor Email"],
             subject=f"[{ticket_id}] {ticket['Subject']}",
             html_body=body,
-            cc=",".join(default_cc) if default_cc else None,
+            cc=",".join(cc_list) if cc_list else None,
+            bcc=",".join(bcc_list) if bcc_list else None,
             attachments=attachments,
         )
         flash(
