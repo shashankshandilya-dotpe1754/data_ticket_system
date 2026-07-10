@@ -1,4 +1,5 @@
 import os
+import json
 import datetime
 
 from functools import wraps
@@ -16,11 +17,16 @@ from flask import (
 
 from werkzeug.utils import secure_filename
 
+import secrets
 import config
 import auth
 import gmail_utils
 import sheets_utils
 import team_status
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
 
@@ -338,6 +344,7 @@ def new_ticket():
                 priorities=config.PRIORITY_OPTIONS,
                 form=request.form,
                 banner=banner,
+                email_directory=sheets_utils.get_email_directory(creds),
             )
 
         # -----------------------------------------
@@ -496,11 +503,13 @@ def new_ticket():
     # GET Request
     # ==========================================================
 
+    email_directory = sheets_utils.get_email_directory(creds)
     return render_template(
         "requestor_form.html",
         priorities=config.PRIORITY_OPTIONS,
         form={},
         banner=banner,
+        email_directory=email_directory,
     )
 
 
