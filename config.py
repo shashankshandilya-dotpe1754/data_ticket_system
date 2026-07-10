@@ -58,7 +58,7 @@ ACCEPTOR_SHEET_ID = 1072795042
 
 SHEET_NAME = "Tickets"
 
-SHEET_RANGE = f"{SHEET_NAME}!A:U"
+SHEET_RANGE = f"{SHEET_NAME}!A:V"
 
 CONVERSATION_SHEET_NAME = "Conversation"
 
@@ -89,6 +89,8 @@ COLUMNS = [
     "Acceptor Description",
     "Thread Id",
     "RFC Message Id",
+    "CC",
+    "BCC",
 ]
 
 # ==========================================================
