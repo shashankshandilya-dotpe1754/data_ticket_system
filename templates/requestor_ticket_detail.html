@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-
 {% block content %}
 
 <a href="{{ url_for('my_tickets') }}" class="btn btn-link">
@@ -10,126 +9,242 @@
     {{ ticket["Ticket ID"] }} — {{ ticket["Subject"] }}
 </h3>
 
+<div class="card mb-4">
 
-<!-- ===================================================== -->
-<!-- Tom Select -->
-<!-- ===================================================== -->
+    <div class="card-body">
 
-<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+        <div class="row">
 
-<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+            <div class="col-md-6">
 
+                <p>
+                    <strong>Assigned To</strong><br>
+                    {{ ticket["Assigned To"] or "Unassigned" }}
+                </p>
 
-<!-- ===================================================== -->
-<!-- Quill -->
-<!-- ===================================================== -->
+            </div>
 
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+            <div class="col-md-3">
 
-<script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+                <p>
+                    <strong>Priority</strong><br>
 
-<div class="mb-4">
+                    <span class="badge bg-{% if ticket['Priority']=='High' %}danger{% elif ticket['Priority']=='Medium' %}warning text-dark{% else %}secondary{% endif %}">
+                        {{ ticket["Priority"] }}
+                    </span>
 
-    <label class="form-label fw-bold">
+                </p>
 
-        Reply
+            </div>
 
-    </label>
+            <div class="col-md-3">
 
-    <div
-        id="replyEditor"
-        style="height:300px;background:white;">
+                <p>
+                    <strong>Status</strong><br>
+
+                    <span class="badge bg-info text-dark">
+                        {{ ticket["Status"] }}
+                    </span>
+
+                </p>
+
+            </div>
+
+        </div>
+
+        {% if ticket["High Priority Reason"] %}
+
+        <div class="alert alert-warning">
+
+            <strong>High Priority Reason</strong><br>
+
+            {{ ticket["High Priority Reason"] }}
+
+        </div>
+
+        {% endif %}
+
+        <div class="row mt-3">
+
+            <div class="col-md-4">
+
+                <small class="text-muted">
+
+                    <strong>Created</strong><br>
+
+                    {{ ticket["Created Date"] }}
+
+                </small>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <small class="text-muted">
+
+                    <strong>Updated</strong><br>
+
+                    {{ ticket["Updated Date"] }}
+
+                </small>
+
+            </div>
+
+            <div class="col-md-4">
+
+                <small class="text-muted">
+
+                    <strong>Closed</strong><br>
+
+                    {{ ticket["Closed Date"] or "—" }}
+
+                </small>
+
+            </div>
+
+        </div>
+
+        {% if ticket["Attachments"] %}
+
+        <hr>
+
+        <p>
+
+            <strong>Attachments</strong><br>
+
+            📎 {{ ticket["Attachments"] }}
+
+        </p>
+
+        {% endif %}
+
+        <hr class="mt-4">
+
+        <h4 class="mb-4">
+
+            💬 Conversation
+
+        </h4>
+
+        <div class="conversation-box">
+
+            {% if conversation %}
+
+                {% for msg in conversation %}
+
+                    <div class="chat-message {% if msg['Sender Type']=='Requestor' %}requestor{% else %}acceptor{% endif %}">
+
+                        <div class="chat-avatar">
+
+                            {% if msg["Sender Type"]=="Requestor" %}
+                                👤
+                            {% else %}
+                                🧑‍💻
+                            {% endif %}
+
+                        </div>
+
+                        <div class="chat-content">
+
+                            <div class="chat-bubble">
+
+                                <div class="chat-header">
+
+                                    <span class="chat-user">
+
+                                        {{ msg["Sender Name"] }}
+
+                                    </span>
+
+                                    <span class="chat-time">
+
+                                        {{ msg["Message Time"] }}
+
+                                    </span>
+
+                                </div>
+
+                                <div class="chat-text">
+
+                                    {% if msg["HTML"] %}
+                                        {{ msg["HTML"]|safe }}
+                                    {% else %}
+                                        <pre style="margin:0;white-space:pre-wrap;">{{ msg["Message"] }}</pre>
+                                    {% endif %}
+
+                                    {% if msg["Attachments"] %}
+                                    <div class="mt-3">
+                                        📎 {{ msg["Attachments"] }}
+                                    </div>
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <div class="alert alert-light">
+
+                    No conversation available.
+
+                </div>
+
+            {% endif %}
+
+        </div>
 
     </div>
 
-    <input
-        type="hidden"
-        name="reply_html"
-        id="reply_html">
-
 </div>
 
-<div class="row mb-4">
+<form
+    method="POST"
+    action="{{ url_for('requestor_reply', ticket_id=ticket['Ticket ID']) }}"
+    enctype="multipart/form-data"
+    id="replyForm">
 
-    <div class="col-md-6">
+    <div class="mb-4">
 
         <label class="form-label fw-bold">
 
-            CC
+            Reply
 
         </label>
 
-        <select
-            id="cc"
-            name="cc"
-            multiple
-            class="form-select">
+        <div
+            id="replyEditor"
+            style="height:250px;background:white;">
+        </div>
 
-            {% for email in email_suggestions %}
-
-                <option
-                    value="{{ email }}"
-                    {% if email in default_cc %}selected{% endif %}>
-
-                    {{ email }}
-
-                </option>
-
-            {% endfor %}
-
-        </select>
+        <input
+            type="hidden"
+            name="reply_html"
+            id="reply_html">
 
     </div>
 
-    <div class="col-md-6">
+    <div class="mb-4">
 
-        <label class="form-label fw-bold">
+        <label class="form-label">
 
-            BCC
+            Attachments
 
         </label>
 
-        <select
-            id="bcc"
-            name="bcc"
-            multiple
-            class="form-select">
-
-            {% for email in email_suggestions %}
-
-                <option
-                    value="{{ email }}"
-                    {% if email in default_bcc %}selected{% endif %}>
-
-                    {{ email }}
-
-                </option>
-
-            {% endfor %}
-
-        </select>
+        <input
+            type="file"
+            name="attachments"
+            class="form-control"
+            multiple>
 
     </div>
-
-</div>
-
-<div class="mb-4">
-
-    <label class="form-label fw-bold">
-
-        Attachments
-
-    </label>
-
-    <input
-        type="file"
-        name="attachments"
-        class="form-control"
-        multiple>
-
-</div>
-
-<div class="d-flex gap-2">
 
     <button
         class="btn btn-primary"
@@ -139,62 +254,28 @@
 
     </button>
 
-</div>
-
 </form>
-
-<!-- ===================================================== -->
-<!-- Tom Select -->
-<!-- ===================================================== -->
-
-<link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
-
-<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
-
-
-<!-- ===================================================== -->
-<!-- Quill -->
-<!-- ===================================================== -->
 
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
-
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 
-
 <script>
 
 const quill = new Quill('#replyEditor', {
 
-    theme: 'snow',
+    theme:'snow',
 
-    placeholder: 'Reply to the Data Team...',
+    placeholder:'Reply to the Data Team...',
 
-    modules: {
+    modules:{
 
-        toolbar: [
+        toolbar:[
 
-            [{ font: [] }],
-
-            [{ size: ['small', false, 'large', 'huge'] }],
-
-            [{ header: [1,2,3,4,5,6,false] }],
-
-            ['bold','italic','underline','strike'],
-
-            [{ color: [] }, { background: [] }],
-
-            [{ script:'sub' }, { script:'super' }],
-
-            [{ list:'ordered' }, { list:'bullet' }],
-
-            [{ indent:'-1' }, { indent:'+1' }],
-
-            [{ align: [] }],
-
-            ['blockquote','code-block'],
-
+            [{header:[1,2,3,false]}],
+            ['bold','italic','underline'],
+            [{color:[]},{background:[]}],
+            [{list:'ordered'},{list:'bullet'}],
             ['link','image'],
-
             ['clean']
 
         ]
@@ -203,46 +284,7 @@ const quill = new Quill('#replyEditor', {
 
 });
 
-// =====================================================
-// Tom Select
-// =====================================================
-
-new TomSelect("#cc", {
-
-    plugins: ["remove_button"],
-
-    create: true,
-
-    persist: false,
-
-    maxOptions: 100,
-
-    placeholder: "Add CC recipients..."
-
-});
-
-
-new TomSelect("#bcc", {
-
-    plugins: ["remove_button"],
-
-    create: true,
-
-    persist: false,
-
-    maxOptions: 100,
-
-    placeholder: "Add BCC recipients..."
-
-});
-
-// =====================================================
-// Submit
-// =====================================================
-
-document
-.getElementById("replyForm")
-.addEventListener("submit", function () {
+document.getElementById("replyForm").addEventListener("submit",function(){
 
     document.getElementById("reply_html").value =
         quill.root.innerHTML;
@@ -252,133 +294,3 @@ document
 </script>
 
 {% endblock %}
-
-
-<div class="d-flex gap-2">
-
-    <button
-        class="btn btn-primary"
-        type="submit">
-
-        💬 Send Reply
-
-    </button>
-
-</div>
-
-</form>
-
-<!-- ===================================================== -->
-<!-- Tom Select -->
-<!-- ===================================================== -->
-
-<link
-    href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
-    rel="stylesheet">
-
-<script
-    src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js">
-</script>
-
-<!-- ===================================================== -->
-<!-- Quill -->
-<!-- ===================================================== -->
-
-<link
-    href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css"
-    rel="stylesheet">
-
-<script
-    src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js">
-</script>
-
-<script>
-
-const quill = new Quill('#replyEditor', {
-
-    theme: 'snow',
-
-    placeholder: 'Reply to the Data Team...',
-
-    modules: {
-
-        toolbar: [
-
-            [{ font: [] }],
-
-            [{ size: ['small', false, 'large', 'huge'] }],
-
-            [{ header: [1,2,3,4,5,6,false] }],
-
-            ['bold','italic','underline','strike'],
-
-            [{ color: [] }, { background: [] }],
-
-            [{ script:'sub' }, { script:'super' }],
-
-            [{ list:'ordered' }, { list:'bullet' }],
-
-            [{ indent:'-1' }, { indent:'+1' }],
-
-            [{ align: [] }],
-
-            ['blockquote','code-block'],
-
-            ['link','image'],
-
-            ['clean']
-
-        ]
-
-    }
-
-});
-
-
-new TomSelect("#cc", {
-
-    plugins: ["remove_button"],
-
-    create: true,
-
-    persist: false,
-
-    maxOptions: 100,
-
-    placeholder: "Add CC recipients..."
-
-});
-
-
-new TomSelect("#bcc", {
-
-    plugins: ["remove_button"],
-
-    create: true,
-
-    persist: false,
-
-    maxOptions: 100,
-
-    placeholder: "Add BCC recipients..."
-
-});
-
-
-document
-.getElementById("replyForm")
-.addEventListener("submit", function () {
-
-    document.getElementById("reply_html").value =
-        quill.root.innerHTML;
-
-});
-
-</script>
-
-{% endblock %}
-
-
-
-
-    
