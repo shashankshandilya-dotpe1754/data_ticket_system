@@ -91,13 +91,15 @@
   <button type="submit" class="btn btn-primary">Submit Ticket</button>
 </form>
 
-<link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+<link
+    href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css"
+    rel="stylesheet">
 
 <link
     href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css"
     rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
   // Full Gmail-style formatting toolbar: bold/italic/underline/strike,
   // headers, lists, indent, links, images, color, alignment, code-block.
@@ -226,22 +228,32 @@ new TomSelect("#bcc", {
 
         },
 
-        item: function(item, escape) {
+        item: function(item, escape){
+          return `
+          <div>
+            ${escape(item.name)}
+            <small class="text-muted">
+                (${escape(item.email)})
+            </small>
+        </div>
+    `;
 
-            return `<div>${escape(item.name)}</div>`;
-
-        }
+}
 
     }
 
 });
   
-  cument.getElementById('ticketForm').addEventListener('submit', function (e) {
-    document.getElementById('description_html').value = quill.root.innerHTML;
-    if (quill.getText().trim().length === 0) {
-      e.preventDefault();
-      alert('Description cannot be empty.');
+  document.getElementById('ticketForm').addEventListener('submit', function(e){
+    document.getElementById("description_html").value =
+      quill.root.innerHTML;
+
+    if(quill.getText().trim().length===0){
+
+        e.preventDefault();
+
+        alert("Description cannot be empty.");
+
     }
-  });
-</script>
-{% endblock %}
+
+});
