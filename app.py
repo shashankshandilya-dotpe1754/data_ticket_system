@@ -1,12 +1,7 @@
-# ==========================================================
-# Import Libraries
-# ==========================================================
-
 import os
-import json
-import tempfile
+import datetime
+
 from functools import wraps
-from datetime import datetime
 
 from flask import (
     Flask,
@@ -16,6 +11,7 @@ from flask import (
     url_for,
     session,
     flash,
+    abort,
 )
 
 from werkzeug.utils import secure_filename
@@ -24,60 +20,82 @@ import config
 import auth
 import gmail_utils
 import sheets_utils
-
-
-# ==========================================================
-# Flask App
-# ==========================================================
+import team_status
 
 app = Flask(__name__)
 
 app.secret_key = config.SECRET_KEY
 
-app.config["UPLOAD_FOLDER"] = config.UPLOAD_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_CONTENT_LENGTH
-app.permanent_session_lifetime = config.PERMANENT_SESSION_LIFETIME
+
+# Stay logged in until explicit logout, instead of Flask's default (a
+# session cookie that dies the moment the browser closes).
+app.config["PERMANENT_SESSION_LIFETIME"] = config.PERMANENT_SESSION_LIFETIME
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+
+os.makedirs(config.UPLOAD_FOLDER, exist_ok=True)
 
 
 # ==========================================================
-# Create Upload Folder
+# Authentication Helpers
 # ==========================================================
 
-os.makedirs(
-    config.UPLOAD_FOLDER,
-    exist_ok=True,
-)
+@app.context_processor
+def inject_globals():
 
+    email = session.get("email", "").lower()
 
-# ==========================================================
-# Current User
-# ==========================================================
+    try:
+        acceptors=team_status.get_assignable_acceptors(creds),
+    except Exception:
+        acceptors = []
+
+    return {
+
+        "is_current_user_acceptor":
+            config.is_acceptor_email(email),
+
+        "is_admin": email.lower() in [
+            x.lower() for x in config.MANAGE_ACCESS_USERS
+        ],
+
+        "acceptors":
+            acceptors,
+    }
+
 
 def current_user():
 
-    creds = auth.credentials_from_session(session)
+    email = session.get("email")
 
-    if not creds:
+    if not email:
         return None, None
 
-    email = auth.get_user_email(creds)
+    creds = auth.credentials_from_dict(session.get("credentials"))
 
-    return creds, email.lower()
+    if creds is None:
+        session.clear()
+        return None, None
 
+    # Save refreshed credentials back into the session
+    session["credentials"] = auth.credentials_to_dict(creds)
 
-# ==========================================================
-# Login Required
-# ==========================================================
+    return email, creds
+
 
 def login_required(func):
 
     @wraps(func)
-
     def wrapper(*args, **kwargs):
 
-        creds, email = current_user()
+        email, creds = current_user()
 
-        if not creds:
+        if email is None:
+
+            flash(
+                "Please login with Google first.",
+                "warning"
+            )
 
             return redirect(url_for("login"))
 
@@ -86,998 +104,814 @@ def login_required(func):
     return wrapper
 
 
+def acceptor_required(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        email, creds = current_user()
+
+        if email is None:
+
+            flash(
+                "Please login first.",
+                "warning"
+            )
+
+            return redirect(url_for("login"))
+
+        if not config.is_acceptor_email(email):
+
+            abort(403)
+
+        return func(*args, **kwargs)
+
+    return wrapper
+
+# ==========================================================
+# Login
+# ==========================================================
+
+@app.route("/login")
+def login():
+    flow = auth.build_flow()
+    auth_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="false",
+        prompt="consent",   # forces Google to re-issue a refresh_token every time
+    )
+    session["oauth_state"] = state
+    return redirect(auth_url)
+
+# ==========================================================
+# OAuth Callback
+# ==========================================================
+
+@app.route("/oauth2callback")
+def oauth2callback():
+    state = session.get("oauth_state")
+    flow = auth.build_flow(state=state)
+    flow.fetch_token(authorization_response=request.url)
+    creds = flow.credentials
+    print("=" * 80)
+    print("FLOW CLIENT ID")
+    print(creds.client_id)
+    print("FLOW TOKEN")
+    print(creds.token)
+    print("=" * 80)
+    print("Refresh Token:", creds.refresh_token)
+    print("=" * 80)
+    print("TOKEN")
+    print(creds.token)
+    print("=" * 80)
+    print("REFRESH TOKEN")
+    print(creds.refresh_token)
+    print("=" * 80)
+    print("SCOPES")
+    print(creds.scopes)
+    print("=" * 80)
+    email = auth.get_user_email(creds)
+
+    session.permanent = True
+
+    session["credentials"] = auth.credentials_to_dict(creds)
+    print(session["credentials"])
+    session["email"] = email
+
+    if auth.is_acceptor(email):
+        team_status.register_acceptor_login(email)
+        return redirect(url_for("dashboard"))
+    return redirect(url_for("my_tickets"))
+
+
+
+# ==========================================================
+# Add/Delete Acceptor
+# ==========================================================
+@app.route("/acceptor/add", methods=["POST"])
+@acceptor_required
+def add_acceptor():
+    email, creds = current_user()
+    new_email=request.form.get("email","").strip().lower()
+    if not new_email:
+        flash("Please enter an email.","warning")
+        return redirect(url_for("dashboard"))
+    sheets_utils.add_acceptor(creds,new_email)
+    flash("Acceptor added successfully.","success")
+    return redirect(url_for("dashboard"))
+
+@app.route("/acceptor/delete", methods=["POST"])
+@acceptor_required
+def delete_acceptor():
+    email, creds = current_user()
+    remove_email=request.form.get("email","").strip().lower()
+    if remove_email==email.lower():
+        flash("You cannot delete yourself.","warning")
+        return redirect(url_for("dashboard"))
+    sheets_utils.delete_acceptor(creds,remove_email)
+    flash("Acceptor deleted successfully.","success")
+    return redirect(url_for("dashboard"))
+
+# ==========================================================
+# Transfer Ticket
+# ==========================================================
+@app.route("/transfer_ticket/<ticket_id>", methods=["POST"])
+@acceptor_required
+def transfer_ticket(ticket_id):
+
+    email, creds = current_user()
+
+    old_ticket = sheets_utils.get_ticket(creds, ticket_id)
+
+    if old_ticket is None:
+        abort(404)
+
+    email = email.lower()
+
+    if email != "pradeep.singh1@dotpe.in":
+        if old_ticket.get("Assigned To", "").lower() != email:
+            abort(403)
+
+    new_assignee = request.form.get("transfer_to", "").strip()
+    transfer_reason = request.form.get("transfer_reason", "").strip()
+
+    if not new_assignee:
+        flash("Please select an acceptor.", "danger")
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+    if new_assignee == old_ticket.get("Assigned To"):
+        flash("Ticket is already assigned to this acceptor.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+
+    now_string = datetime.datetime.now(config.IST).strftime("%Y-%m-%d %H:%M:%S")
+
+    new_ticket = sheets_utils.transfer_ticket(
+        creds=creds,
+        old_ticket=old_ticket,
+        new_assignee=new_assignee,
+        transfer_by=email,
+        transfer_reason=transfer_reason,
+        now_string=now_string,
+    )
+
+    flash(
+        f"Ticket transferred successfully. New Ticket ID: {new_ticket['Ticket ID']}",
+        "success",
+    )
+
+    return redirect(
+        url_for(
+            "ticket_detail",
+            ticket_id=new_ticket["Ticket ID"],
+        )
+    )
+
+
+# ==========================================================
+# Logout
+# ==========================================================
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("home"))
+
+
 # ==========================================================
 # Home
 # ==========================================================
 
 @app.route("/")
-
 def home():
+    email, creds = current_user()
 
-    creds, email = current_user()
+    if email is None:
+        return render_template("login.html")
 
-    if creds:
-
-        if config.is_acceptor_email(email):
-
-            return redirect(url_for("dashboard"))
-
-        return redirect(url_for("my_tickets"))
-
-    return redirect(url_for("login"))
-
-
-# ==========================================================
-# Authentication Routes
-# ==========================================================
-
-@app.route("/login")
-def login():
-
-    authorization_url, state = auth.get_authorization_url()
-
-    session["oauth_state"] = state
-
-    return redirect(authorization_url)
-
-
-@app.route("/oauth2callback")
-def oauth2callback():
-
-    state = session.get("oauth_state")
-
-    creds = auth.fetch_token(
-        request.url,
-        state,
-    )
-
-    session["credentials"] = auth.credentials_to_dict(creds)
-
-    email = auth.get_user_email(creds).lower()
-
-    session["user_email"] = email
-
-    if config.is_acceptor_email(email):
-
+    if auth.is_acceptor(email):
         return redirect(url_for("dashboard"))
 
     return redirect(url_for("my_tickets"))
 
 
-@app.route("/logout")
-def logout():
+# ---------------------------------------------------------------------------
+# REQUESTOR UI
+# ---------------------------------------------------------------------------
 
-    session.clear()
-
-    flash(
-        "You have been logged out.",
-        "success",
-    )
-
-    return redirect(url_for("login"))
-
-
-# ==========================================================
-# Dashboard (Acceptor)
-# ==========================================================
-
-@app.route("/dashboard")
+@app.route("/new-ticket", methods=["GET", "POST"])
 @login_required
-def dashboard():
+def new_ticket():
 
-    creds = current_user()
+    email, creds = current_user()
 
-    tickets = sheets_utils.get_all_tickets(creds)
+    banner = team_status.availability_banner()
 
-    acceptors = sheets_utils.get_acceptors(creds)
+    if request.method == "POST":
 
-    user_email = session["user_email"].lower()
+        subject = request.form.get("subject", "").strip()
+        description_html = request.form.get("description_html", "")
+        priority = request.form.get("priority", "Medium")
+        high_priority_reason = request.form.get("high_priority_reason", "").strip()
+        cc = request.form.get("cc", "").strip()
+        bcc = request.form.get("bcc", "").strip()
 
-    # Only show tickets assigned to the logged-in acceptor
-    tickets = [
-        t for t in tickets
-        if t.get("Assigned To", "").lower() == user_email
-    ]
+        is_confidential = request.form.get("is_confidential") == "on"
 
-    status_filter = request.args.get("status", "").strip()
+        # -----------------------------------------
+        # Validation
+        # -----------------------------------------
 
-    priority_filter = request.args.get("priority", "").strip()
+        if subject == "":
+            flash("Subject cannot be empty.", "error")
+            return redirect(url_for("new_ticket"))
 
-    if status_filter:
+        if description_html.strip() == "":
+            flash("Description cannot be empty.", "error")
+            return redirect(url_for("new_ticket"))
 
-        tickets = [
-            t for t in tickets
-            if t["Status"] == status_filter
-        ]
+        if priority == "High" and high_priority_reason == "":
+            flash("High Priority Reason is mandatory.", "error")
+            return render_template(
+                "requestor_form.html",
+                priorities=config.PRIORITY_OPTIONS,
+                form=request.form,
+                banner=banner,
+            )
 
-    if priority_filter:
+        # -----------------------------------------
+        # Ticket ID + timestamp (IST)
+        # -----------------------------------------
 
-        tickets = [
-            t for t in tickets
-            if t["Priority"] == priority_filter
-        ]
+        ticket_id = sheets_utils.next_ticket_id(creds)
+        now = datetime.datetime.now(config.IST)
+        now_string = now.strftime("%Y-%m-%d %H:%M:%S")
 
-    tickets.sort(
-        key=lambda x: x.get("Updated Date", ""),
-        reverse=True,
-    )
+        # -----------------------------------------
+        # Attachments
+        # -----------------------------------------
+
+        attachments = []
+        attachment_names = []
+
+        for file in request.files.getlist("attachments"):
+            if file.filename == "":
+                continue
+            filename = secure_filename(file.filename)
+            save_path = os.path.join(config.UPLOAD_FOLDER, f"{ticket_id}_{filename}")
+            file.save(save_path)
+            attachments.append({"filename": filename, "path": save_path})
+            attachment_names.append(filename)
+
+        # -----------------------------------------
+        # Email (rich HTML — separate from what's stored in the Sheet)
+        # -----------------------------------------
+        if is_confidential:
+            assigned_to = config.CONFIDENTIAL_ASSIGNEE
+            mail_receivers = [config.CONFIDENTIAL_ASSIGNEE]    # Only Pradeep receives confidential tickets
+            cc = ""
+            bcc = ""
+        else:
+            assigned_to = ""
+            mail_receivers = sheets_utils.get_acceptors(creds)    # Send notification to every acceptor from Google Sheet
+            mail_receivers = list(dict.fromkeys(mail_receivers))  # Remove duplicates if any
+        
+        signature = gmail_utils.get_signature(creds)
+        email_subject = f"[{ticket_id}] {subject}"
+
+        banner_html = ""
+        if banner:
+            banner_html = f"""
+            <div style="background:#fff3cd;border:1px solid #ffc107;
+                        padding:12px;border-radius:6px;margin-bottom:15px;">
+                <b>Notice</b><br>{banner}
+            </div>
+            """
+
+        email_body = f"""
+        <h3>Data Team Ticket</h3>
+        <table>
+        <tr><td><b>Ticket ID</b></td><td>{ticket_id}</td></tr>
+        <tr><td><b>Priority</b></td><td>{priority}</td></tr>
+        <tr><td><b>Status</b></td><td>Open</td></tr>
+        <tr><td><b>Raised By</b></td><td>{email}</td></tr>
+        <tr><td><b>Created</b></td><td>{now_string}</td></tr>
+        </table>
+        {banner_html}
+        <hr>
+        {description_html}
+        <br><br>
+        {signature}
+        """
+
+        sent = gmail_utils.send_new_ticket_email(
+            creds,
+            to=", ".join(mail_receivers),
+            subject=email_subject,
+            html_body=email_body,
+            cc=cc if cc else None,
+            bcc=bcc if bcc else None,
+            attachments=attachments,
+        )
+
+        rfc_message_id = gmail_utils.get_rfc_message_id(creds, sent["message_id"])
+
+        # -----------------------------------------
+        # Sheet storage — PLAIN TEXT description, not raw HTML
+        # -----------------------------------------
+
+        ticket = {
+            "Ticket ID": ticket_id,
+            "Created Date": now_string,
+            
+            "Requestor Email":
+                config.CONFIDENTIAL_TEXT if is_confidential else email,
+            
+            "Subject":
+                config.CONFIDENTIAL_TEXT if is_confidential else subject,
+            
+            "Requestor Description":
+                config.CONFIDENTIAL_TEXT if is_confidential
+                else sheets_utils.html_to_plain_text(description_html),
+            
+            "Priority": priority,
+            
+            "High Priority Reason":
+                config.CONFIDENTIAL_TEXT if is_confidential
+            else high_priority_reason,
+            "Status": "Open",
+            "Assigned To": assigned_to,
+            "Attachments": ", ".join(attachment_names),
+            "Updated Date": now_string,
+            "Closed Date": "",
+            "Acceptor Description":
+                config.CONFIDENTIAL_TEXT if is_confidential else "",
+            "Thread Id": sent["thread_id"],
+            "RFC Message Id": rfc_message_id,
+        }
+        sheets_utils.append_ticket(creds, ticket)
+
+        flash(f"Your ticket {ticket_id} has been raised successfully.", "success")
+
+        return redirect(url_for("my_tickets"))
 
     return render_template(
-        "dashboard.html",
-        tickets=tickets,
-        acceptors=acceptors,
-        statuses=config.STATUS_OPTIONS,
+        "requestor_form.html",
         priorities=config.PRIORITY_OPTIONS,
-        status_filter=status_filter,
-        priority_filter=priority_filter,
+        form={},
+        banner=banner,
     )
 
 
-# ==========================================================
-# My Tickets (Requestor)
-# ==========================================================
+# ---------------------------------------------------------------------------
+# MY TICKET
+# ---------------------------------------------------------------------------
 
 @app.route("/my-tickets")
 @login_required
 def my_tickets():
 
-    creds = current_user()
-
-    user_email = session["user_email"].lower()
-
-    tickets = sheets_utils.get_all_tickets(creds)
+    email, creds = current_user()
 
     tickets = [
-        t for t in tickets
-        if t["Requestor Email"].lower() == user_email
+        t for t in sheets_utils.get_all_tickets(creds)
+        if t.get("Requestor Email") == email
     ]
 
-    status_filter = request.args.get("status", "").strip()
+    # -----------------------------
+    # Read Filters
+    # -----------------------------
+    created_date = request.args.get("created_date", "")
+    assigned_to = request.args.get("assigned_to", "")
+    priority = request.args.get("priority", "")
+    status = request.args.get("status", "")
+    search = request.args.get("search", "").strip().lower()
 
-    priority_filter = request.args.get("priority", "").strip()
+    # -----------------------------
+    # Apply Filters
+    # -----------------------------
 
-    if status_filter:
-
+    if created_date:
         tickets = [
             t for t in tickets
-            if t["Status"] == status_filter
+            if t.get("Created Date", "").startswith(created_date)
         ]
 
-    if priority_filter:
-
+    if assigned_to:
         tickets = [
             t for t in tickets
-            if t["Priority"] == priority_filter
+            if t.get("Assigned To", "") == assigned_to
         ]
+
+    if priority:
+        tickets = [
+            t for t in tickets
+            if t.get("Priority", "") == priority
+        ]
+
+    if status:
+        tickets = [
+            t for t in tickets
+            if t.get("Status", "") == status
+        ]
+
+    # -----------------------------
+    # Global Search
+    # -----------------------------
+
+    if search:
+
+        searchable_columns = [
+
+            "Ticket ID",
+            "Subject",
+            "Parent Ticket ID",
+            "Previous Ticket ID",
+
+        ]
+
+        tickets = [
+
+            t
+
+            for t in tickets
+
+            if any(
+                search in str(t.get(col, "")).lower()
+                for col in searchable_columns
+            )
+
+        ]
+
+    # -----------------------------
+    # Sort
+    # -----------------------------
 
     tickets.sort(
-        key=lambda x: x.get("Updated Date", ""),
-        reverse=True,
+        key=lambda x: x.get("Created Date", ""),
+        reverse=True
     )
 
     return render_template(
         "my_tickets.html",
         tickets=tickets,
-        statuses=config.STATUS_OPTIONS,
+        email=email,
+        acceptors=team_status.get_assignable_acceptors(creds),
         priorities=config.PRIORITY_OPTIONS,
-        status_filter=status_filter,
-        priority_filter=priority_filter,
-    )
-
-# ==========================================================
-# Update Ticket
-# ==========================================================
-
-@app.route("/ticket/<ticket_id>/update", methods=["POST"])
-@login_required
-def update_ticket(ticket_id):
-
-    creds = current_user()
-
-    ticket = sheets_utils.get_ticket(
-        creds,
-        ticket_id,
-    )
-
-    if not ticket:
-
-        flash(
-            "Ticket not found.",
-            "danger",
-        )
-
-        return redirect(
-            url_for("dashboard")
-        )
-
-    now = datetime.now(config.IST).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-    status = request.form.get(
-        "status",
-        ticket["Status"],
-    )
-
-    assigned_to = request.form.get(
-        "assigned_to",
-        ticket["Assigned To"],
-    )
-
-    html_reply = request.form.get(
-        "acceptor_description_html",
-        "",
-    )
-
-    plain_reply = sheets_utils.html_to_plain_text(
-        html_reply
-    )
-
-    cc = request.form.getlist("cc")
-
-    bcc = request.form.getlist("bcc")
-
-    uploaded_files = []
-
-    attachment_names = []
-
-    for f in request.files.getlist("attachments"):
-
-        if not f or not f.filename:
-
-            continue
-
-        filename = secure_filename(
-            f.filename
-        )
-
-        filepath = os.path.join(
-            config.UPLOAD_FOLDER,
-            filename,
-        )
-
-        f.save(filepath)
-
-        uploaded_files.append({
-
-            "filename": filename,
-
-            "path": filepath,
-
-        })
-
-        attachment_names.append(
-            filename
-        )
-    signature = gmail_utils.get_signature(
-        creds
-    )
-
-    html_body = f"""
-    {html_reply}
-    <br><br>
-    {signature}
-    """
-
-    gmail_utils.send_threaded_reply(
-
-        creds=creds,
-
-        thread_id=ticket["Thread Id"],
-
-        rfc_message_id=ticket["RFC Message Id"],
-
-        to=ticket["Requestor Email"],
-
-        subject=f"[{ticket['Ticket ID']}] {ticket['Subject']}",
-
-        html_body=html_body,
-
-        cc=",".join(cc),
-
-        bcc=",".join(bcc),
-
-        attachments=uploaded_files,
-
+        statuses=config.STATUS_OPTIONS,
+        current_created_date=created_date,
+        current_assignee=assigned_to,
+        current_priority=priority,
+        current_status=status,
+        current_search=search,
     )
 
 
-    updates = {
+# ---------------------------------------------------------------------------
+# ACCEPTOR DASHBOARD
+# ---------------------------------------------------------------------------
 
-        "Status": status,
+@app.route("/dashboard")
+@acceptor_required
+def dashboard():
 
-        "Assigned To": assigned_to,
+    email, creds = current_user()
 
-        "Updated Date": now,
+    tickets = sheets_utils.get_all_tickets(creds)
 
-        "Acceptor Description": plain_reply,
+    email = email.lower()
 
-        "CC": ",".join(cc),
+    # Only Pradeep can view every ticket
+    if email != "pradeep.singh1@dotpe.in":
+        tickets = [
+            t for t in tickets
+            if t.get("Assigned To", "").lower() == email
+        ]
 
-        "BCC": ",".join(bcc),
+    # -----------------------------
+    # Filters
+    # -----------------------------
+    selected_status = request.args.get("status", "All")
+    selected_priority = request.args.get("priority", "All")
+    selected_assignee = request.args.get("assigned_to", "All")
+    selected_created_date = request.args.get("created_date", "")
+    search = request.args.get("search", "").strip().lower()
 
+    filtered = tickets
+
+    if selected_status != "All":
+        filtered = [
+            t for t in filtered
+            if t.get("Status") == selected_status
+        ]
+
+    if selected_priority != "All":
+        filtered = [
+            t for t in filtered
+            if t.get("Priority") == selected_priority
+        ]
+
+    if selected_assignee != "All":
+        filtered = [
+            t for t in filtered
+            if t.get("Assigned To") == selected_assignee
+        ]
+
+    # -----------------------------
+    # Created Date Filter
+    # -----------------------------
+    if selected_created_date:
+        filtered = [
+            t for t in filtered
+            if t.get("Created Date", "").startswith(selected_created_date)
+        ]
+
+    # -----------------------------
+    # Global Search
+    # -----------------------------
+    if search:
+
+        searchable_columns = [
+            "Ticket ID",
+            "Requestor Email",
+            "Subject",
+            "Requestor Description",
+            "High Priority Reason",
+            "Parent Ticket ID",
+            "Previous Ticket ID",
+        ]
+
+        filtered = [
+            t
+            for t in filtered
+            if any(
+                search in str(t.get(col, "")).lower()
+                for col in searchable_columns
+            )
+        ]
+
+    # -----------------------------
+    # Dashboard Counts
+    # -----------------------------
+    counts = {
+        status: len([
+            t for t in tickets
+            if t.get("Status") == status
+        ])
+        for status in config.STATUS_OPTIONS
     }
 
-    if status == "Closed":
+    total_tickets = len(tickets)
+    open_tickets = counts.get("Open", 0)
+    progress_tickets = counts.get("In Progress", 0)
+    resolved_tickets = counts.get("Resolved", 0)
+    closed_tickets = counts.get("Closed", 0)
 
-        updates["Closed Date"] = now
+    high_priority = len([
+        t for t in tickets
+        if t.get("Priority") == "High"
+    ])
 
-    else:
+    filtered.sort(
+        key=lambda x: x.get("Updated Date", ""),
+        reverse=True,
+    )
 
-        updates["Closed Date"] = ""
+    return render_template(
+        "acceptor_dashboard.html",
+        email=email,
+        tickets=filtered,
+        counts=counts,
+        total_tickets=total_tickets,
+        open_tickets=open_tickets,
+        progress_tickets=progress_tickets,
+        resolved_tickets=resolved_tickets,
+        closed_tickets=closed_tickets,
+        high_priority=high_priority,
+        statuses=config.STATUS_OPTIONS,
+        priorities=config.PRIORITY_OPTIONS,
+        acceptors=team_status.get_assignable_acceptors(creds),
+        availability=team_status.get_availability(),
+        current_status=selected_status,
+        current_priority=selected_priority,
+        current_assignee=selected_assignee,
+        current_created_date=selected_created_date,
+        current_search=search,
+    )
 
-    sheets_utils.update_ticket_fields(
+# ---------------------------------------------------------------------------
+# Ticket Details
+# ---------------------------------------------------------------------------
 
-        creds,
+@app.route("/ticket/<ticket_id>")
+@acceptor_required
+def ticket_detail(ticket_id):
 
-        ticket_id,
+    email, creds = current_user()
 
-        updates,
+    ticket = sheets_utils.get_ticket(creds, ticket_id)
 
-        ticket,
+    if ticket is None:
+        abort(404)
+        
+    email = email.lower()
+    
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket.get("Assigned To", "").lower() != email:
+            abort(403)
 
+    return render_template(
+        "ticket_detail.html",
+        ticket=ticket,
+        statuses=config.STATUS_OPTIONS,
+        priorities=config.PRIORITY_OPTIONS,
+        acceptors=team_status.get_assignable_acceptors(creds),
+        email=email,
     )
 
 
-    sheets_utils.append_conversation_message(
+# ---------------------------------------------------------------------------
+# Availability
+# ---------------------------------------------------------------------------
 
-        creds,
+@app.route("/availability", methods=["GET", "POST"])
+@acceptor_required
+def availability():
 
-        {
+    email, creds = current_user()
 
-            "Ticket ID": ticket_id,
+    if request.method == "POST":
+        status = request.form.get("status", "Available")
+        note = request.form.get("note", "")
 
-            "Sender Type": "Acceptor",
+        team_status.set_availability(status=status, note=note, set_by=email)
 
-            "Sender Name": session["user_email"],
+        flash("Availability updated successfully.", "success")
+        return redirect(url_for("dashboard"))
 
-            "Message": plain_reply,
-
-            "HTML": html_reply,
-
-            "Message Time": now,
-
-            "Attachments": ", ".join(
-                attachment_names
-            ),
-
-        }
-
+    return render_template(
+        "availability.html",
+        current=team_status.get_availability(),
+        options=config.AVAILABILITY_OPTIONS,
     )
 
+# ---------------------------------------------------------------------------
+# UPDATE TICKET
+# ---------------------------------------------------------------------------
 
-    flash(
+@app.route("/ticket/<ticket_id>/update", methods=["POST"])
+@acceptor_required
+def update_ticket(ticket_id):
 
-        "Ticket updated successfully.",
+    email, creds = current_user()
 
-        "success",
+    ticket = sheets_utils.get_ticket(creds, ticket_id)
+    
+    if ticket is None:
+        abort(404)
+        
+    email = email.lower()
+    
+    if email != "pradeep.singh1@dotpe.in":
+        if ticket.get("Assigned To", "").lower() != email:
+            abort(403)
+    
+    old_status = ticket.get("Status", "")
+    old_assignee = ticket.get("Assigned To", "")
 
-    )
+    new_status = request.form.get("status", old_status)
+    new_assignee = request.form.get("assigned_to", old_assignee)
 
-    return redirect(
+    acceptor_note_html = request.form.get("acceptor_description_html", "").strip()
 
-        url_for(
+    # Quill's "empty" state is literally "<p><br></p>", not "".
+    note_is_empty = acceptor_note_html in ("", "<p><br></p>")
 
-            "ticket_detail",
+    now = datetime.datetime.now(config.IST)
+    now_string = now.strftime("%Y-%m-%d %H:%M:%S")
 
-            ticket_id=ticket_id,
+    updates = {"Updated Date": now_string}
+    email_changes = []
 
+    # --------------------------------------------
+    # Status
+    # --------------------------------------------
+
+    if new_status != old_status:
+        updates["Status"] = new_status
+        email_changes.append(
+            f"<li>Status changed from <b>{old_status}</b> to <b>{new_status}</b></li>"
+        )
+        if new_status in ("Resolved", "Closed"):
+            updates["Closed Date"] = now_string
+
+    # --------------------------------------------
+    # Assignment
+    # --------------------------------------------
+
+    if new_assignee != old_assignee:
+        updates["Assigned To"] = new_assignee
+        email_changes.append(f"<li>Assigned to <b>{new_assignee}</b></li>")
+
+    # --------------------------------------------
+    # Notes — stored as PLAIN TEXT in the Sheet, sent as rich HTML in email
+    # --------------------------------------------
+
+    if not note_is_empty:
+        existing = ticket.get("Acceptor Description", "")
+        note_plain = sheets_utils.html_to_plain_text(acceptor_note_html)
+
+        entry = (
+            f"{now_string} - {email}\n"
+            f"{note_plain}\n"
+            "-----------------------------------\n"
         )
 
-    )
+        updates["Acceptor Description"] = (existing + "\n" + entry) if existing else entry
+        email_changes.append("<li>Comment Added</li>")
 
+    # --------------------------------------------
+    # Nothing changed
+    # --------------------------------------------
 
-# ==========================================================
-# Requestor Reply
-# ==========================================================
+    if len(updates) == 1:
+        flash("Nothing to update.", "warning")
+        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
-@app.route("/my-ticket/<ticket_id>/reply", methods=["POST"])
-@login_required
-def requestor_reply(ticket_id):
+    # --------------------------------------------
+    # Update the Sheet (reuses the ticket dict already fetched above —
+    # no need to re-read the whole sheet to find the row again)
+    # --------------------------------------------
 
-    creds = current_user()
+    sheets_utils.update_ticket_fields(creds, ticket_id, updates, ticket=ticket)
 
-    ticket = sheets_utils.get_ticket(
-        creds,
-        ticket_id,
-    )
+    # --------------------------------------------
+    # Email the requestor
+    # --------------------------------------------
 
-    if not ticket:
+    signature = gmail_utils.get_signature(creds)
 
-        flash(
-            "Ticket not found.",
-            "danger",
-        )
+    update_html = ""
+    if email_changes:
+        update_html = "<ul>" + "".join(email_changes) + "</ul>"
 
-        return redirect(
-            url_for("my_tickets")
-        )
+    note_html = ""
+    if not note_is_empty:
+        note_html = f"<hr><b>Comment</b><br><br>{acceptor_note_html}"
 
-    now = datetime.now(config.IST).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-    html_reply = request.form.get(
-        "reply_html",
-        "",
-    )
-
-    plain_reply = sheets_utils.html_to_plain_text(
-        html_reply
-    )
-
-    uploaded_files = []
-
-    attachment_names = []
-
-    for f in request.files.getlist("attachments"):
-
-        if not f or not f.filename:
-
-            continue
-
-        filename = secure_filename(
-            f.filename
-        )
-
-        filepath = os.path.join(
-            config.UPLOAD_FOLDER,
-            filename,
-        )
-
-        f.save(filepath)
-
-        uploaded_files.append({
-
-            "filename": filename,
-
-            "path": filepath,
-
-        })
-
-        attachment_names.append(
-            filename
-        )
-
-    signature = gmail_utils.get_signature(
-        creds
-    )
-
-    html_body = f"""
-    {html_reply}
+    body = f"""
+    <h3>Ticket Updated</h3>
+    <p><b>Ticket ID :</b> {ticket_id}</p>
+    {update_html}
+    {note_html}
     <br><br>
     {signature}
     """
 
-    cc = []
+    default_cc = config.default_cc_for_assignee(new_assignee)
 
-    if ticket.get("CC"):
+    attachments = []
+    for file in request.files.getlist("attachments"):
+        if file and file.filename:
+            attachments.append({"filename": file.filename, "data": file.read()})
 
-        cc = [
+    rfc_message_id = ticket.get("RFC Message Id")
 
-            x.strip()
-
-            for x in ticket["CC"].split(",")
-
-            if x.strip()
-
-        ]
-
-    bcc = []
-
-    if ticket.get("BCC"):
-
-        bcc = [
-
-            x.strip()
-
-            for x in ticket["BCC"].split(",")
-
-            if x.strip()
-
-        ]
-
-    gmail_utils.send_threaded_reply(
-
-        creds=creds,
-
-        thread_id=ticket["Thread Id"],
-
-        rfc_message_id=ticket["RFC Message Id"],
-
-        to=ticket["Assigned To"],
-
-        subject=f"[{ticket['Ticket ID']}] {ticket['Subject']}",
-
-        html_body=html_body,
-
-        cc=",".join(cc),
-
-        bcc=",".join(bcc),
-
-        attachments=uploaded_files,
-
-    )
-
-    sheets_utils.update_ticket_fields(
-
-        creds,
-
-        ticket_id,
-
-        {
-
-            "Updated Date": now,
-
-            "Requestor Description": plain_reply,
-
-        },
-
-        ticket,
-
-    )
-
-    sheets_utils.append_conversation_message(
-
-        creds,
-
-        {
-
-            "Ticket ID": ticket_id,
-
-            "Sender Type": "Requestor",
-
-            "Sender Name": session["user_email"],
-
-            "Message": plain_reply,
-
-            "HTML": html_reply,
-
-            "Message Time": now,
-
-            "Attachments": ", ".join(
-                attachment_names
-            ),
-
-        },
-
-    )
-
-    flash(
-
-        "Reply sent successfully.",
-
-        "success",
-
-    )
-
-    return redirect(
-
-        url_for(
-
-            "my_ticket_detail",
-
-            ticket_id=ticket_id,
-
+    if rfc_message_id:
+        gmail_utils.send_threaded_reply(
+            creds,
+            to=ticket["Requestor Email"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            rfc_message_id=rfc_message_id,
+            cc=",".join(default_cc) if default_cc else None,
+            attachments=attachments,
         )
-
-    )
-
-
-# ==========================================================
-# Transfer Ticket
-# ==========================================================
-
-@app.route("/ticket/<ticket_id>/transfer", methods=["POST"])
-@login_required
-def transfer_ticket(ticket_id):
-
-    creds = current_user()
-
-    old_ticket = sheets_utils.get_ticket(
-        creds,
-        ticket_id,
-    )
-
-    if not old_ticket:
-
-        flash(
-            "Ticket not found.",
-            "danger",
-        )
-
-        return redirect(
-            url_for("dashboard")
-        )
-
-    new_assignee = request.form.get(
-        "transfer_to",
-        ""
-    ).strip().lower()
-
-    transfer_reason = request.form.get(
-        "transfer_reason",
-        ""
-    ).strip()
-
-    if not new_assignee:
-
-        flash(
-            "Please select an acceptor.",
-            "warning",
-        )
-
-        return redirect(
-            url_for(
-                "ticket_detail",
-                ticket_id=ticket_id,
-            )
-        )
-
-    if new_assignee == old_ticket["Assigned To"].lower():
-
-        flash(
-            "Ticket is already assigned to this user.",
-            "warning",
-        )
-
-        return redirect(
-            url_for(
-                "ticket_detail",
-                ticket_id=ticket_id,
-            )
-        )
-
-    now = datetime.now(config.IST).strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-    new_ticket = sheets_utils.transfer_ticket(
-
-        creds,
-
-        old_ticket,
-
-        new_assignee,
-
-        session["user_email"],
-
-        transfer_reason,
-
-        now,
-
-    )
-
-    sheets_utils.update_ticket_fields(
-
-        creds,
-
-        new_ticket["Ticket ID"],
-
-        {
-
-            "Thread Id": old_ticket["Thread Id"],
-
-            "RFC Message Id": old_ticket["RFC Message Id"],
-
-            "CC": old_ticket.get("CC", ""),
-
-            "BCC": old_ticket.get("BCC", ""),
-
-        },
-
-        new_ticket,
-
-    )
-
-
-    html_body = f"""
-    <p>
-        A ticket has been transferred to you.
-    </p>
-
-    <p>
-
-        <strong>Ticket ID:</strong>
-        {new_ticket["Ticket ID"]}
-
-    </p>
-
-    <p>
-
-        <strong>Subject:</strong>
-        {new_ticket["Subject"]}
-
-    </p>
-
-    <p>
-
-        <strong>Transfer Reason:</strong><br>
-
-        {transfer_reason or "-"}
-
-    </p>
-    """
-
-    gmail_utils.send_new_ticket_email(
-
-        creds,
-
-        to=new_assignee,
-
-        subject=f"[{new_ticket['Ticket ID']}] Ticket Transferred",
-
-        html_body=html_body,
-
-    )
-
-    flash(
-
-        "Ticket transferred successfully.",
-
-        "success",
-
-    )
-
-    return redirect(
-
-        url_for(
-
-            "ticket_detail",
-
-            ticket_id=new_ticket["Ticket ID"],
-
-        )
-
-    )
-
-
-# ==========================================================
-# Manage Acceptors
-# ==========================================================
-
-@app.route("/manage-access")
-@login_required
-def manage_access():
-
-    user_email = session["user_email"].lower()
-
-    if user_email not in config.MANAGE_ACCESS_USERS:
-
-        flash(
-            "Access denied.",
-            "danger",
-        )
-
-        return redirect(url_for("dashboard"))
-
-    creds = current_user()
-
-    acceptors = sheets_utils.get_acceptors(creds)
-
-    return render_template(
-
-        "manage_access.html",
-
-        acceptors=acceptors,
-
-    )
-
-
-@app.route("/manage-access/add", methods=["POST"])
-@login_required
-def add_acceptor():
-
-    user_email = session["user_email"].lower()
-
-    if user_email not in config.MANAGE_ACCESS_USERS:
-
-        flash(
-            "Access denied.",
-            "danger",
-        )
-
-        return redirect(url_for("dashboard"))
-
-    creds = current_user()
-
-    email = request.form.get(
-        "email",
-        ""
-    ).strip().lower()
-
-    if not email:
-
-        flash(
-            "Email is required.",
-            "warning",
-        )
-
-        return redirect(
-            url_for("manage_access")
-        )
-
-    added = sheets_utils.add_acceptor(
-        creds,
-        email,
-    )
-
-    if added:
-
-        flash(
-            "Acceptor added successfully.",
-            "success",
-        )
-
     else:
-
+        # No RFC message id on record (e.g. a ticket created before this
+        # column existed) — send as a fresh email instead of failing.
+        gmail_utils.send_new_ticket_email(
+            creds,
+            to=ticket["Requestor Email"],
+            subject=f"[{ticket_id}] {ticket['Subject']}",
+            html_body=body,
+            cc=",".join(default_cc) if default_cc else None,
+            attachments=attachments,
+        )
         flash(
-            "Acceptor already exists.",
+            "Note: this ticket had no recorded email thread, so the "
+            "update was sent as a new email rather than a threaded reply.",
             "warning",
         )
 
-    return redirect(
-        url_for("manage_access")
-    )
+    flash("Ticket updated successfully.", "success")
 
-@app.route("/manage-access/delete/<path:email>", methods=["POST"])
-@login_required
-def delete_acceptor(email):
-
-    user_email = session["user_email"].lower()
-
-    if user_email not in config.MANAGE_ACCESS_USERS:
-
-        flash(
-            "Access denied.",
-            "danger",
-        )
-
-        return redirect(url_for("dashboard"))
-
-    creds = current_user()
-
-    deleted = sheets_utils.delete_acceptor(
-        creds,
-        email,
-    )
-
-    if deleted:
-
-        flash(
-            "Acceptor removed successfully.",
-            "success",
-        )
-
-    else:
-
-        flash(
-            "Acceptor not found.",
-            "warning",
-        )
-
-    return redirect(
-        url_for("manage_access")
-    )
+    return redirect(url_for("ticket_detail", ticket_id=ticket_id))
 
 
-@app.route("/manage-access/delete/<path:email>", methods=["POST"])
-@login_required
-def delete_acceptor(email):
-
-    user_email = session["user_email"].lower()
-
-    if user_email not in config.MANAGE_ACCESS_USERS:
-
-        flash(
-            "Access denied.",
-            "danger",
-        )
-
-        return redirect(url_for("dashboard"))
-
-    creds = current_user()
-
-    deleted = sheets_utils.delete_acceptor(
-        creds,
-        email,
-    )
-
-    if deleted:
-
-        flash(
-            "Acceptor removed successfully.",
-            "success",
-        )
-
-    else:
-
-        flash(
-            "Acceptor not found.",
-            "warning",
-        )
-
-    return redirect(
-        url_for("manage_access")
-    )
-
-# ==========================================================
-# 404
-# ==========================================================
-
-@app.errorhandler(404)
-def page_not_found(error):
-
-    return (
-
-        render_template(
-
-            "404.html"
-
-        ),
-
-        404,
-
-    )
-
-# ==========================================================
-# 500
-# ==========================================================
-
-@app.errorhandler(500)
-def internal_error(error):
-
-    return (
-
-        render_template(
-
-            "500.html"
-
-        ),
-
-        500,
-
-    )
-
-# ==========================================================
-# Run
-# ==========================================================
+print("\nREGISTERED ROUTES\n")
+for rule in app.url_map.iter_rules():
+    print(rule.endpoint,"->",rule.rule)
+print("\nEND ROUTES\n")
 
 if __name__ == "__main__":
-
-    app.run(
-
-        host="0.0.0.0",
-
-        port=5000,
-
-        debug=True,
-
-    )
-
-if __name__ == "__main__":
-    app.run(debug=True)
-
-# ==========================================================
-# Error Handlers
-# ==========================================================
-
-@app.errorhandler(404)
-def page_not_found(error):
-    return render_template("404.html"), 404
-
-
-@app.errorhandler(500)
-def internal_server_error(error):
-    return render_template("500.html"), 500
-
-# ==========================================================
-# Run Application
-# ==========================================================
-
-if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=5000,
-        debug=True,
-    )
+    app.run(debug=True, port=5000)
