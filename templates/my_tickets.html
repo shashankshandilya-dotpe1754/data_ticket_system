@@ -168,7 +168,6 @@
             <th>Created</th>
             <th>Updated</th>
             <th>Closed</th>
-            <th width="120">Action</th>
 
         </tr>
 
@@ -180,11 +179,7 @@
 
     <tr>
 
-        <td>
-            <a href="{{ url_for('my_ticket_detail', ticket_id=t['Ticket ID']) }}">
-                {{ t["Ticket ID"] }}
-            </a>
-        </td>
+        <td>{{ t["Ticket ID"] }}</td>
 
         <td>{{ t["Subject"] }}</td>
 
@@ -252,18 +247,6 @@
 
         </td>
 
-        <td>
-            
-            <a
-                href="{{ url_for('my_ticket_detail', ticket_id=t['Ticket ID']) }}"
-                class="btn btn-sm btn-primary">
-                
-                Open
-            
-            </a>
-        
-        </td>
-
     </tr>
 
     {% else %}
@@ -271,7 +254,7 @@
     <tr>
 
         <td
-            colspan="9"
+            colspan="8"
             class="text-center text-muted">
 
             No tickets found.
