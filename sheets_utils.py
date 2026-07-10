@@ -432,3 +432,59 @@ def delete_conversation(creds, ticket_id):
     """
 
     pass
+
+# ==========================================================
+# Email Directory
+# ==========================================================
+
+def get_email_directory(creds):
+    """
+    Returns all users from the Email_Directory sheet.
+
+    Output Example:
+
+    [
+        {
+            "email": "john@dotpe.in",
+            "name": "John Doe"
+        },
+        ...
+    ]
+    """
+
+    resp = requests.get(
+        _values_url("Email_Directory!A:B"),
+        headers=_headers(creds),
+        timeout=20,
+    )
+
+    resp.raise_for_status()
+
+    values = resp.json().get("values", [])
+
+    if len(values) <= 1:
+        return []
+
+    users = []
+
+    for row in values[1:]:
+
+        email = row[0].strip() if len(row) > 0 else ""
+        name = row[1].strip() if len(row) > 1 else ""
+
+        if not email:
+            continue
+
+        users.append({
+
+            "email": email,
+
+            "name": name,
+
+        })
+
+    users.sort(
+        key=lambda x: x["name"].lower()
+    )
+
+    return users
