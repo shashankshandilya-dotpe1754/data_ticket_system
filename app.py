@@ -987,6 +987,48 @@ def update_ticket(ticket_id):
             "update was sent as a new email rather than a threaded reply.",
             "warning",
         )
+        
+    # --------------------------------------------
+    # Save Conversation
+    # --------------------------------------------
+    
+    if not note_is_empty:
+        attachment_names = [
+            file["filename"]
+            for file in attachments
+        ]
+
+    sheets_utils.append_conversation_message(
+
+        creds,
+
+        {
+
+            "Ticket ID": ticket_id,
+
+            "Sender Type": "Acceptor",
+
+            "Sender Name": email.split("@")[0],
+
+            "Sender Email": email,
+
+            "Message":
+                sheets_utils.html_to_plain_text(
+                    acceptor_note_html
+                ),
+
+            "HTML":
+                acceptor_note_html,
+
+            "Message Time":
+                now_string,
+
+            "Attachments":
+                ", ".join(attachment_names),
+
+        }
+
+    )
 
     flash("Ticket updated successfully.", "success")
 
