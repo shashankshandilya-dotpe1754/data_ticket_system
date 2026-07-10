@@ -289,8 +289,9 @@ def home():
         return render_template("login.html")
 
     if auth.is_acceptor(email):
-        return redirect(url_for("my_ticket"))
-
+        return redirect(url_for("dashboard"))
+    
+    return redirect(url_for("my_tickets"))
     
 
 
@@ -331,8 +332,6 @@ def new_ticket():
 
         if priority == "High" and high_priority_reason == "":
             flash("High Priority Reason is mandatory.", "error")
-            
-            return redirect(url_for("my_tickets"))
             
             return render_template(
                 "requestor_form.html",
@@ -464,52 +463,46 @@ def new_ticket():
             creds,
             ticket,
         )
-    
-    
-    # ==========================================================
-    # Save First Conversation Message
-    # ==========================================================
-    
-    if not is_confidential:
-        
-        sheets_utils.append_conversation_message(
-            creds,
-            {
-                "Ticket ID": ticket_id,
-                
-                "Sender Type": "Requestor",
-                
-                "Sender Name": email.split("@")[0],
-                
-                "Sender Email": email,
-                
-                "Message":
-                sheets_utils.html_to_plain_text(description_html),
-                
-                "HTML":
-                description_html,
-                
-                "Message Time":
-                now_string,
-                
-                "Attachments":
-                ", ".join(attachment_names),
-            }
-        )
-        
-        flash(
-            f"Your ticket {ticket_id} has been raised successfully.",
-            "success",
-        )
-        
-        
-        
-        return render_template(
-            "my_tickets",
-            priorities=config.PRIORITY_OPTIONS,
-            form={},
-            banner=banner,
-        )
+
+
+        # ==========================================================
+        # Save First Conversation Message
+        # ==========================================================
+        if not is_confidential:
+            sheets_utils.append_conversation_message(
+                creds,
+                {
+                    "Ticket ID": ticket_id,
+                    "Sender Type": "Requestor",
+                    "Sender Name": email.split("@")[0],
+                    "Sender Email": email,
+                    "Message":
+                    sheets_utils.html_to_plain_text(description_html),
+                    
+                    "HTML":
+                    description_html,
+                    
+                    "Message Time":
+                    now_string,
+                    
+                    "Attachments":
+                    ", ".join(attachment_names),
+                }
+            )
+            
+            flash(
+                f"Your ticket {ticket_id} has been raised successfully.",
+                "success",
+            )
+
+            return redirect(url_for("my_tickets"))
+            
+            return render_template(
+                "requestor_form.html",
+                priorities=config.PRIORITY_OPTIONS,
+                form={},
+                banner=banner,
+            )
 
 
 # ---------------------------------------------------------------------------
