@@ -86,6 +86,34 @@ COLUMNS = [
 ]
 
 # ==========================================================
+# Conversation Sheet
+# ==========================================================
+
+CONVERSATION_SHEET_NAME = "Conversation"
+
+CONVERSATION_SHEET_RANGE = f"{CONVERSATION_SHEET_NAME}!A:H"
+
+CONVERSATION_COLUMNS = [
+
+    "Ticket ID",
+
+    "Sender Type",
+
+    "Sender Name",
+
+    "Sender Email",
+
+    "Message",
+
+    "HTML",
+
+    "Message Time",
+
+    "Attachments",
+
+]
+
+# ==========================================================
 # TEAM MEMBERS
 # ==========================================================
 
