@@ -628,16 +628,21 @@ def dashboard():
     email, creds = current_user()
 
     tickets = sheets_utils.get_all_tickets(creds)
-
     email = email.lower()
-
+    
     # Only Pradeep can view every ticket
     if email != "pradeep.singh1@dotpe.in":
         tickets = [
             t for t in tickets
-            if t.get("Assigned To", "").lower() == email
+            if (
+                t.get("Assigned To", "").lower() == email
+                or (
+                    t.get("Assigned To", "").strip() == ""
+                    and
+                    t.get("Status", "") == "Open"
+                )
+            )
         ]
-
     # -----------------------------
     # Filters
     # -----------------------------
@@ -1003,7 +1008,6 @@ def update_ticket(ticket_id):
     # --------------------------------------------
     
     if not note_is_empty:
-        
         attachment_names = [
             file["filename"]
             for file in attachments
@@ -1016,25 +1020,23 @@ def update_ticket(ticket_id):
                 "Sender Type": "Acceptor",
                 "Sender Name": email.split("@")[0],
                 "Sender Email": email,
-                "Message":
-                sheets_utils.html_to_plain_text(
+                "Message": sheets_utils.html_to_plain_text(
                     acceptor_note_html
                 ),
-                
-                "HTML":
-                acceptor_note_html,
-                
-                "Message Time":
-                now_string,
-                
-                "Attachments":
-                ", ".join(attachment_names),
+                "HTML": acceptor_note_html,
+                "Message Time": now_string,
+                "Attachments": ", ".join(attachment_names),
             }
         )
         
         flash("Ticket updated successfully.", "success")
         
-        return redirect(url_for("ticket_detail", ticket_id=ticket_id))
+        return redirect(
+            url_for(
+                "ticket_detail",
+                ticket_id=ticket_id,
+            )
+        )
 
 
 print("\nREGISTERED ROUTES\n")
