@@ -972,31 +972,41 @@ def update_ticket(ticket_id):
         if file and file.filename:
             attachments.append({"filename": file.filename, "data": file.read()})
 
-    rfc_message_id = ticket.get("RFC Message Id")
-
-    if rfc_message_id:
-        gmail_utils.send_threaded_reply(
-            creds,
-            to=ticket["Requestor Email"],
-            subject=f"[{ticket_id}] {ticket['Subject']}",
-            html_body=body,
-            rfc_message_id=rfc_message_id,
-            cc=",".join(cc_list) if cc_list else None,
-            bcc=",".join(bcc_list) if bcc_list else None,
-            attachments=attachments,
-        )
-    else:
-        # No RFC message id on record (e.g. a ticket created before this
-        # column existed) — send as a fresh email instead of failing.
-        gmail_utils.send_new_ticket_email(
-            creds,
-            to=ticket["Requestor Email"],
-            subject=f"[{ticket_id}] {ticket['Subject']}",
-            html_body=body,
-            cc=",".join(cc_list) if cc_list else None,
-            bcc=",".join(bcc_list) if bcc_list else None,
-            attachments=attachments,
-        )
+    try:
+        thread_id = ticket.get("Thread Id")
+        rfc_message_id = ticket.get("RFC Message Id")
+        
+        if thread_id and rfc_message_id:
+            gmail_utils.send_threaded_reply(
+                creds=creds,
+                thread_id=thread_id,
+                rfc_message_id=rfc_message_id,to=ticket["Requestor Email"],
+                subject=f"[{ticket_id}] {ticket['Subject']}",
+                html_body=body,
+                cc=",".join(cc_list) if cc_list else None,
+                bcc=",".join(bcc_list) if bcc_list else None,
+                attachments=attachments,
+            )
+        
+        else:
+            gmail_utils.send_new_ticket_email(
+                creds,
+                to=ticket["Requestor Email"],
+                subject=f"[{ticket_id}] {ticket['Subject']}",
+                html_body=body,
+                cc=",".join(cc_list) if cc_list else None,
+                bcc=",".join(bcc_list) if bcc_list else None,
+                attachments=attachments,
+            )
+    
+    except Exception as e:
+        print("=" * 80)
+        print("UPDATE EMAIL ERROR")
+        print(e)
+        print(type(e))
+        print("=" * 80)
+        
+        raise
         flash(
             "Note: this ticket had no recorded email thread, so the "
             "update was sent as a new email rather than a threaded reply.",
